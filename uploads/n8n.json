@@ -1,0 +1,129 @@
+{
+  "name": "TradingView \u2192 OKX (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "tv-okx",
+        "options": {
+          "responseData": "{\"ok\": true, \"received\": {{$json}}}"
+        }
+      },
+      "id": "Webhook_TradingView",
+      "name": "Webhook (TradingView)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validar secret y mapear campos a OKX\nconst expected = $env.WEBHOOK_SECRET || 'changeme';\nconst p = items[0].json;\nif (!p.secret || String(p.secret) !== String(expected)) {\n  throw new Error('Invalid secret');\n}\nfunction mapInstId(symbol) {\n  symbol = String(symbol).toUpperCase();\n  if (symbol.includes('-USDT-')) return symbol;\n  if (symbol.endsWith('-USDT')) return symbol + '-SWAP';\n  if (symbol.endsWith('USDT')) return symbol.slice(0, -4) + '-USDT-SWAP';\n  return symbol + '-USDT-SWAP';\n}\nconst out = {\n  instId: mapInstId(p.symbol),\n  side: (p.side || 'buy').toLowerCase(),\n  ordType: (p.type || 'market').toLowerCase(),\n  sz: String(p.size || '1'),\n  tdMode: p.tdMode || 'isolated',\n  lever: p.lever || '5',\n  posSide: p.posSide || undefined,\n  px: (p.price && p.type === 'limit') ? String(p.price) : undefined,\n  clOrdId: p.clOrdId || undefined,\n  reduceOnly: p.reduceOnly ? 'true' : undefined,\n};\nreturn [{ json: out }];\n"
+      },
+      "id": "Function_Map",
+      "name": "Function: Validate & Map",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Firma OKX y a\u00f1ade headers\nconst crypto = require('crypto');\nconst baseUrl = $env.OKX_BASE_URL || 'https://www.okx.com';\nconst apiKey = $env.OKX_API_KEY;\nconst secretKey = $env.OKX_SECRET_KEY;\nconst passphrase = $env.OKX_PASSPHRASE;\nconst simulated = ($env.OKX_SIMULATED || '1') === '1';\nif (!apiKey || !secretKey || !passphrase) {\n  throw new Error('Faltan credenciales OKX en variables de entorno');\n}\nconst path = '/api/v5/trade/order';\nconst ts = new Date().toISOString().replace(/\\..+/, '.000Z');\nconst body = JSON.stringify(items[0].json);\nconst preSign = ts + 'POST' + path + body;\nconst sign = crypto.createHmac('sha256', secretKey).update(preSign).digest('base64');\nconst headers = {\n  'OK-ACCESS-KEY': apiKey,\n  'OK-ACCESS-SIGN': sign,\n  'OK-ACCESS-TIMESTAMP': ts,\n  'OK-ACCESS-PASSPHRASE': passphrase,\n  'Content-Type': 'application/json',\n};\nif (simulated) headers['x-simulated-trading'] = '1';\nreturn [{\n  json: { url: baseUrl + path, body: JSON.parse(body) },\n  headers\n}];\n"
+      },
+      "id": "Function_Sign",
+      "name": "Function: Sign OKX",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json[\"url\"]}}",
+        "options": {},
+        "sendBody": true,
+        "jsonParameters": true,
+        "requestMethod": "POST",
+        "bodyParametersJson": "={{$json[\"body\"]}}",
+        "headerParametersJson": "={{$headers}}"
+      },
+      "id": "HTTP_OKX",
+      "name": "HTTP Request \u2192 OKX",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1040,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (TradingView)": {
+      "main": [
+        [
+          {
+            "node": "Function: Validate & Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function: Validate & Map": {
+      "main": [
+        [
+          {
+            "node": "Function: Sign OKX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function: Sign OKX": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request \u2192 OKX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "env": [
+      {
+        "name": "WEBHOOK_SECRET",
+        "value": "changeme"
+      },
+      {
+        "name": "OKX_BASE_URL",
+        "value": "https://www.okx.com"
+      },
+      {
+        "name": "OKX_SIMULATED",
+        "value": "1"
+      },
+      {
+        "name": "OKX_API_KEY",
+        "value": ""
+      },
+      {
+        "name": "OKX_SECRET_KEY",
+        "value": ""
+      },
+      {
+        "name": "OKX_PASSPHRASE",
+        "value": ""
+      }
+    ]
+  }
+}

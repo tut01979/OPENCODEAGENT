@@ -1,0 +1,34 @@
+{
+  "name": "opencodeagent",
+  "version": "1.0.0",
+  "description": "Agente de IA local con interfaz Telegram",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "authorize": "tsx src/authorize.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^13.7.0",
+    "googleapis": "^171.4.0",
+    "grammy": "^1.35.0",
+    "groq-sdk": "^0.15.0",
+    "node-cron": "^4.2.1",
+    "node-gtts": "^2.0.2",
+    "msedge-tts": "^1.3.1",
+    "google-tts-api": "^2.0.2",
+    "open": "^11.0.0",
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.12.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

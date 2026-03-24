@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  opencodeagent:
+    build: .
+    restart: always
+    volumes:
+      # Carpeta para las cargas (PDFs, imágenes)
+      - ./uploads:/app/uploads
+      # Carpeta persistente de base de datos
+      - ./data:/app/data
+      # Si quieres montar tus archivos de claves aquí
+      # - ./service-account.json:/app/service-account.json
+      # - ./token.json:/app/token.json
+      # - .env:/app/.env
+    environment:
+      - NODE_ENV=production
+    network_mode: bridge

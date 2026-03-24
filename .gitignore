@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.db
+service-account.json
+gmail-credentials.json
+token.json
+

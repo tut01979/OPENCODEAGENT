@@ -1,0 +1,22 @@
+services:
+  opencodeagent:
+    build: .
+    container_name: opencodeagent
+    restart: always
+    volumes:
+      # Persistencia de base de datos
+      - ./memory.db:/app/memory.db
+      # Persistencia de archivos descargados/subidos
+      - ./uploads:/app/uploads
+      # Credenciales OAuth2 (importante que se mantengan)
+      - ./token.json:/app/token.json
+      - ./gmail-credentials.json:/app/gmail-credentials.json
+      - ./service-account.json:/app/service-account.json
+      # Variables de entorno
+      - ./.env:/app/.env
+    # No es necesario exponer puertos para el bot a menos que uses webhooks
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"

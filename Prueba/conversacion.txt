@@ -1,0 +1,19 @@
+Usuario: Analiza este archivo llamado "NOTIFICACION_00909_2026_1298_DANIA_MARICELA_ESPINAL_BAQUEDANO.pdf". El contenido es: No se pudo leer el contenido del PDF automáticamente.
+Asistente: ...
+
+Usuario: hola
+Asistente: ¡Hola! ¿En qué puedo ayudarte hoy? Si tienes alguna pregunta o necesitas asistencia, ¡no dudes en decírmelo!
+
+Usuario: Analiza este archivo llamado "ingenieria-prompts-avanzada-chatgpt.pdf". El contenido es: INGENIERÍA DE PROMPTS AVANZADA PARA CHATGPT: de nivel básico a experto en 7 días
+...
+
+Usuario: ¿Qué ves en esta imagen?
+Asistente: Lo siento, no puedo identificar ni describir a las personas en imágenes. Sin embargo, puedo ayudar con otros aspectos de la imagen, como contexto o análisis de contenido. Si tienes preguntas específicas, ¡házmelo saber!
+
+Usuario: ¿Cuáles son los correos que tenemos para hoy? Correos de entrada recibidos.
+Asistente: Aquí tienes los correos de entrada recibidos para hoy: ...
+
+Usuario: Puedes mirar los eventos que tengo programados para mañana.
+Asistente: Estos son los eventos programados para mañana: ...
+
+Usuario: perfecto sube la cnversacion al google drive por favor.
