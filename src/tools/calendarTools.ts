@@ -10,22 +10,21 @@ async function getCalendarClient() {
   try {
     const credentialsContent = await fs.readFile(path.resolve(CREDENTIALS_PATH), 'utf-8');
     const credentials = JSON.parse(credentialsContent);
-    
     const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-    
+
     const oAuth2Client = new google.auth.OAuth2(
       client_id,
       client_secret,
       redirect_uris[0]
     );
-    
+
     try {
       const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
       oAuth2Client.setCredentials(JSON.parse(tokenContent));
     } catch {
       return null;
     }
-    
+
     return google.calendar({ version: 'v3', auth: oAuth2Client });
   } catch {
     return null;

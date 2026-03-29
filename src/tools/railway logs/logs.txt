@@ -1,0 +1,770 @@
+
+PS C:\Users\eduar\OPENCODEAGENT> railway variables
+New version available: v4.34.0 visit https://docs.railway.com/guides/cli for more info
+╔═════════════════════════ Variables for opencodeagent ════════════════════════╗
+║ CRON_SCHEDULE                  │  30 6 * * *                                 ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ DB_PATH                        │ ./data/memory.db                            ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ ELEVENLABS_API_KEY             │ sk_922efb87e43d642f48cae2075b4ab21500715b99 ║
+║                                │ d326ba87                                    ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ FIREBASE_PROJECT_ID            │ opencodeagent-e77bc                         ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ GOOGLE_APPLICATION_CREDENTIALS │ ./service-account.json                      ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ GROQ_API_KEY                   │ gsk_Kdo7kPYNBSvtOOgDxO2XWGdyb3FYz2tuAhR9nOZ ║
+║                                │ S7BTi1iGZWEPT                               ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OLLAMA_BASE_URL                │ http://localhost:11434                      ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OLLAMA_MODEL                   │ gemma3:4b                                   ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_API_KEY             │ sk-or-v1-                                   ║
+║                                │ d4305b8cbe847cf782c5518e07580146aeae044a0e3 ║
+║                                │ 273713ceabc88b684c3ca                       ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_MODEL               │ google/gemini-2.0-flash-001                 ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_TEXT_MODEL          │ openai/gpt-4o-mini                          ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT            │ production                                  ║
+║                                │ d4305b8cbe847cf782c5518e07580146aeae044a0e3 ║
+║                                │ 273713ceabc88b684c3ca                       ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_MODEL               │ google/gemini-2.0-flash-001                 ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_TEXT_MODEL          │ openai/gpt-4o-mini                          ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT            │ production                                  ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_MODEL               │ google/gemini-2.0-flash-001                 ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ OPENROUTER_TEXT_MODEL          │ openai/gpt-4o-mini                          ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT            │ production                                  ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT_ID         │ 2da18d69-524e-46af-b612-d0eb79e4dbcb        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT_NAME       │ production                                  ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PRIVATE_DOMAIN         │ opencodeagent.railway.internal              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_ENVIRONMENT_NAME       │ production                                  ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PRIVATE_DOMAIN         │ opencodeagent.railway.internal              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PRIVATE_DOMAIN         │ opencodeagent.railway.internal              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║ RAILWAY_PRIVATE_DOMAIN         │ opencodeagent.railway.internal              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║ RAILWAY_PROJECT_ID             │ 44d95d63-0ecc-4f0d-95f2-4a8c44509c1c        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_PROJECT_NAME           │ opencodeagent                               ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_SERVICE_ID             │ fec09537-7e4c-4351-b9e5-0abb7c6ad9f7        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ RAILWAY_SERVICE_NAME           │ opencodeagent                               ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ TELEGRAM_ALLOWED_USER_IDS      │ 1572946817                                  ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ TELEGRAM_BOT_TOKEN             │ 8286496753:AAEU5X_-IqREx99Q6ZsF4yqEooMZYk94 ║
+║                                │ OgE                                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+opencodeagent
+Deployments
+Variables
+Metrics
+Settings
+Unexposed service
+europe-west4-drams3a
+1 Replica
+
+
+
+
+History
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+opencodeagent
+/
+548791ea
+Failed
+
+Mar 25, 2026, 7:41 PM GMT+1
+Get Help
+Details
+Build Logs
+Deploy Logs
+Network Flow Logs
+Search build logs
+
+You reached the start of the range
+Mar 25, 2026, 7:36 PM
+ 
+[Region: europe-west4]
+=========================
+Using Detected Dockerfile
+=========================
+
+context: dqlz-R_Zk
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for docker.io/library/node:20-slim
+488ms
+
+auth
+library/node:pull token for registry-1.docker.io
+0ms
+
+internal
+load .dockerignore
+0ms
+
+internal
+load build context
+0ms
+
+builder
+FROM docker.io/library/node:20-slim@sha256:1e85773c98c31d4fe5b545e4cb17379e617b348832fb3738b22a08f68dec30f3 cached
+7ms
+
+builder
+RUN apt-get update && apt-get install -y     python3     make     g++     pkg-config     libcairo2-dev     libpango1.0-dev     libjpeg-dev     libgif-dev     librsvg2-dev     && rm -rf /var/lib/apt/lists/* cached
+14ms
+
+stage-1
+RUN apt-get update && apt-get install -y     libcairo2     libpango-1.0-0     libpangocairo-1.0-0     libjpeg62-turbo     libgif7     librsvg2-2     && rm -rf /var/lib/apt/lists/* cached
+14ms
+
+stage-1
+COPY --from=builder /app/package*.json ./ cached
+0ms
+
+stage-1
+COPY --from=builder /app/node_modules ./node_modules cached
+0ms
+
+stage-1
+COPY .env .
+0ms
+
+builder
+COPY package*.json ./ cached
+0ms
+
+stage-1
+COPY token.json* . cached
+0ms
+
+stage-1
+RUN mkdir -p uploads data cached
+0ms
+
+stage-1
+COPY service-account.json* . cached
+0ms
+
+builder
+WORKDIR /app cached
+0ms
+
+stage-1
+WORKDIR /app cached
+0ms
+
+stage-1
+COPY --from=builder /app/dist ./dist cached
+0ms
+
+stage-1
+COPY gmail-credentials.json* . cached
+0ms
+
+builder
+RUN npm install cached
+0ms
+
+builder
+RUN npm run build cached
+0ms
+
+builder
+COPY . . cached
+0ms
+Dockerfile:53
+-------------------
+51 |     COPY service-account.json* .
+52 |     COPY token.json* .
+53 | >>> COPY .env .
+54 |
+55 |     # Variables de entorno por defecto
+-------------------
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref xlmehg3anc2bn7zzjnxcwbccc::ua06hawrfzn2usd9zun260qiv: "/.env": not foun
+Get Help
+Details
+Build Logs
+Deploy Logs
+Network Flow Logs
+Search build logs
+
+You reached the start of the range
+Mar 25, 2026, 7:38 PM
+ 
+[Region: europe-west4]
+=========================
+Using Detected Dockerfile
+=========================
+
+context: ss9k-UsEv
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for docker.io/library/node:20-slim
+164ms
+
+internal
+load .dockerignore
+0ms
+
+internal
+load build context
+0ms
+
+base
+FROM docker.io/library/node:20-slim@sha256:1e85773c98c31d4fe5b545e4cb17379e617b348832fb3738b22a08f68dec30f3 cached
+0ms
+
+stage-1
+RUN apt-get update && apt-get install -y     libcairo2     libpango-1.0-0     libpangocairo-1.0-0     libjpeg62-turbo     libgif7     librsvg2-2     && rm -rf /var/lib/apt/lists/* cached
+24ms
+
+builder
+RUN apt-get update && apt-get install -y     python3     make     g++     pkg-config     libcairo2-dev     libpango1.0-dev     libjpeg-dev     libgif-dev     librsvg2-dev     && rm -rf /var/lib/apt/lists/* cached
+24ms
+
+stage-1
+COPY token.json* . cached
+0ms
+
+stage-1
+COPY service-account.json* . cached
+0ms
+
+stage-1
+COPY gmail-credentials.json* . cached
+0ms
+
+stage-1
+RUN mkdir -p uploads data cached
+0ms
+
+stage-1
+COPY --from=builder /app/dist ./dist cached
+0ms
+
+stage-1
+COPY --from=builder /app/node_modules ./node_modules cached
+0ms
+
+builder
+RUN npm run build cached
+🛠️ Tool call arguments: {"name":"PRUEBA"}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🛠️ Tool call arguments: {"max_results":5}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+PS C:\Users\eduar\OPENCODEAGENT> railway up
+  Indexed                                                                                                                 Compressed [====================] 100%                                                                                  Uploaded                                                                                                                Build Logs: https://railway.com/project/44d95d63-0ecc-4f0d-95f2-4a8c44509c1c/service/fec09537-7e4c-4351-b9e5-0abb7c6ad9f7?id=daf0668d-29eb-4c6a-8f5c-c56e09491dff&
+
+=========================
+Using Detected Dockerfile
+=========================
+
+[internal] load build definition from Dockerfile
+[internal] load build definition from Dockerfile
+[internal] load build definition from Dockerfile
+[internal] load build definition from Dockerfile
+[internal] load metadata for docker.io/library/node:20-slim
+[internal] load .dockerignore
+[internal] load .dockerignore
+[internal] load .dockerignore
+[builder 4/7] COPY package*.json ./
+[internal] load build context
+[builder 3/7] WORKDIR /app
+[builder 2/7] RUN apt-get update && apt-get install -y     python3     make     g++     pkg-config     libcairo2-dev     libpango1.0-dev     libjpeg-dev     libgif-dev     librsvg2-dev     && rm -rf /var/lib/apt/lists/*
+[stage-1  3/10] WORKDIR /app
+[stage-1  2/10] RUN apt-get update && apt-get install -y     libcairo2     libpango-1.0-0     libpangocairo-1.0-0     libjpeg62-turbo     libgif7     librsvg2-2     && rm -rf /var/lib/apt/lists/*
+[builder 1/7] FROM docker.io/library/node:20-slim@sha256:1e85773c98c31d4fe5b545e4cb17379e617b348832fb3738b22a08f68dec30f3
+[stage-1 10/10] COPY token.json* .
+[stage-1  9/10] COPY service-account.json* .
+[stage-1  8/10] COPY gmail-credentials.json* .
+[stage-1  7/10] RUN mkdir -p uploads data
+[stage-1  5/10] COPY --from=builder /app/package*.json ./
+[stage-1  4/10] COPY --from=builder /app/node_modules ./node_modules
+[builder 7/7] RUN npm run build
+[builder 6/7] COPY . .
+[builder 5/7] RUN npm install
+[internal] load build context
+[internal] load build context
+[internal] load build context
+[builder 2/7] RUN apt-get update && apt-get install -y     python3     make     g++     pkg-config     libcairo2-dev     libpango1.0-dev     libjpeg-dev     libgif-dev     librsvg2-dev     && rm -rf /var/lib/apt/lists/*
+[builder 3/7] WORKDIR /app
+[builder 4/7] COPY package*.json ./
+[builder 6/7] COPY . .
+[builder 6/7] COPY . .
+[builder 7/7] RUN npm run build
+
+> opencodeagent@1.0.0 build
+> tsc
+
+
+[builder 7/7] RUN npm run build
+[stage-1  2/10] RUN apt-get update && apt-get install -y     libcairo2     libpango-1.0-0     libpangocairo-1.0-0     libjpeg62-turbo     libgif7     librsvg2-2     && rm -rf /var/lib/apt/lists/*
+[stage-1  3/10] WORKDIR /app
+[stage-1  4/10] COPY --from=builder /app/node_modules ./node_modules
+[stage-1  5/10] COPY --from=builder /app/package*.json ./
+[stage-1  6/10] COPY --from=builder /app/dist ./dist
+[stage-1  6/10] COPY --from=builder /app/dist ./dist
+[stage-1  7/10] RUN mkdir -p uploads data
+[stage-1  7/10] RUN mkdir -p uploads data
+[stage-1  8/10] COPY gmail-credentials.json* .
+[stage-1  8/10] COPY gmail-credentials.json* .
+[stage-1  9/10] COPY service-account.json* .
+[stage-1  9/10] COPY service-account.json* .
+[stage-1 10/10] COPY token.json* .
+[stage-1 10/10] COPY token.json* .
+exporting to docker image format
+exporting to image
+[auth] sharing credentials for production-europe-west4-drams3a.railway-registry.com
+[auth] sharing credentials for production-europe-west4-drams3a.railway-registry.com
+importing to docker
+importing to docker
+Build time: 32.21 seconds
+Deploy complete
+Starting Container
+✅ Firebase conectado correctamente (Proyecto: opencodeagent-e77bc, Database: default)
+🚀 Iniciando OPENCODEAGENT v1.3 (Voice: Enrique/Lucia)...
+⏰ Programando tarea diaria:  30 6 * * *
+✅ Bot conectado a Telegram
+📡 Esperando mensajes...
+🤖 OPENCODEAGENT está activo y sincronizado
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+🛠️ Tool call arguments: {"days_ahead":0}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Tool call arguments: {"days_ahead":0}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+🎙️ TTSMP3: Intentando voz "Lucia"... [1/5]
+✅ TTSMP3: Voz "Lucia" generada con éxito.
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+🛠️ Tool call arguments: {"folder_id":"","max_results":10}
+    at async chat (file:///app/dist/services/llm.js:168:20)
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🎙️ TTSMP3: Intentando voz "Lucia"... [1/5]
+✅ TTSMP3: Voz "Lucia" generada con éxito.
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando google/gemini-2.0-flash-001 (Imágenes: true)
+📡 OpenRouter [google/gemini-2.0-flash-001]
+🤖 Usando Groq (Llama 70B)...
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processPhotoMessage (file:///app/dist/services/telegram.js:243:28)
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: true
+Groq principal falló: Error: Groq API error: 400 - {"error":{"message":"messages[11].content must be a string","type":"invalid_request_error","param":"messages[11].content"}}
+
+    at callGroq (file:///app/dist/services/llm.js:60:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:178:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processPhotoMessage (file:///app/dist/services/telegram.js:243:28)
+🏠 Usando Ollama (Local)...
+Ollama falló: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14976:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async callOllama (file:///app/dist/services/llm.js:8:22)
+    at async chat (file:///app/dist/services/llm.js:187:16)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processPhotoMessage (file:///app/dist/services/telegram.js:243:28) {
+  [cause]: AggregateError [ECONNREFUSED]:
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Error procesando foto: Error: Ningún servicio de LLM disponible. Configura OPENROUTER_API_KEY o GROQ_API_KEY.
+    at chat (file:///app/dist/services/llm.js:191:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processPhotoMessage (file:///app/dist/services/telegram.js:243:28)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: true
+Groq principal falló: Error: Groq API error: 400 - {"error":{"message":"messages[11].content must be a string","type":"invalid_request_error","param":"messages[11].content"}}
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Error procesando mensaje: Error: Ningún servicio de LLM disponible. Configura OPENROUTER_API_KEY o GROQ_API_KEY.
+
+    at callGroq (file:///app/dist/services/llm.js:60:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:178:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🏠 Usando Ollama (Local)...
+Ollama falló: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14976:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async callOllama (file:///app/dist/services/llm.js:8:22)
+    at async chat (file:///app/dist/services/llm.js:187:16)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28) {
+  [cause]: AggregateError [ECONNREFUSED]:
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+    at chat (file:///app/dist/services/llm.js:191:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: true
+🏠 Usando Ollama (Local)...
+Groq principal falló: Error: Groq API error: 400 - {"error":{"message":"messages[11].content must be a string","type":"invalid_request_error","param":"messages[11].content"}}
+
+    at callGroq (file:///app/dist/services/llm.js:60:15)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async chat (file:///app/dist/services/llm.js:187:16)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  [cause]: AggregateError [ECONNREFUSED]:
+      at internalConnectMultiple (node:net:1122:18)
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:178:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+    at node:internal/deps/undici/undici:14976:13
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: true
+Groq principal falló: Error: Groq API error: 400 - {"error":{"message":"messages[11].content must be a string","type":"invalid_request_error","param":"messages[11].content"}}
+
+    at callGroq (file:///app/dist/services/llm.js:60:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+Ollama falló: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14976:13
+    at async callOllama (file:///app/dist/services/llm.js:8:22)
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+}
+Error procesando mensaje: Error: Ningún servicio de LLM disponible. Configura OPENROUTER_API_KEY o GROQ_API_KEY.
+    at chat (file:///app/dist/services/llm.js:191:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+opencodeagent
+/
+daf0668d
+Active
+
+Mar 26, 2026, 2:39 PM GMT+1
+Details
+Build Logs
+Deploy Logs
+Network Flow Logs
+Filter and search logs
+
+You reached the start of the range
+Mar 26, 2026, 2:39 PM
+Starting Container
+✅ Firebase conectado correctamente (Proyecto: opencodeagent-e77bc, Database: default)
+🚀 Iniciando OPENCODEAGENT v1.3 (Voice: Enrique/Lucia)...
+⏰ Programando tarea diaria:  30 6 * * * 
+✅ Bot conectado a Telegram
+📡 Esperando mensajes...
+🤖 OPENCODEAGENT está activo y sincronizado
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Tool call arguments: {"max_results":10}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🛠️ Tool call arguments: {"days_ahead":0}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processTextMessage (file:///app/dist/services/telegram.js:127:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Tool call arguments: {"days_ahead":0}
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+🎙️ TTSMP3: Intentando voz "Lucia"... [1/5]
+✅ TTSMP3: Voz "Lucia" generada con éxito.
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+🛠️ Tool call arguments: {"folder_id":"","max_results":10}
+    at async chat (file:///app/dist/services/llm.js:168:20)
+🧠 IA Híbrida [OpenRouter]: Usando openai/gpt-4o-mini (Imágenes: false)
+📡 OpenRouter [openai/gpt-4o-mini]
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+OpenRouter principal falló: Error: OpenRouter API error: 402 - {"error":{"message":"Insufficient credits. Add more using https://openrouter.ai/settings/credits","code":402}}
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+    at callOpenRouter (file:///app/dist/services/llm.js:89:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async chat (file:///app/dist/services/llm.js:168:20)
+    at async runAgent (file:///app/dist/agent/agent.js:48:26)
+    at async processVoiceMessage (file:///app/dist/services/telegram.js:93:28)
+🤖 Usando Groq (Llama 70B)...
+🤖 Groq (Text): llama-3.3-70b-versatile | hasImages: false
+🎙️ TTSMP3: Intentando voz "Lucia"... [1/5]
+✅ TTSMP3: Voz "Lucia" generada con éxito.
+🛠️ Agent [1572946817]: Enviando 26 herramientas al LLM: get_current_time, web_search, read_file, write_file, execute_command, create_csv, read_csv, read_email, send_email, get_email_details, download_gmail_attachment, mark_email_as_read, create_event, list_events, upload_to_drive, list_drive_files, create_drive_folder, delete_drive_file, read_drive_file, search_drive, text_to_speech, read_sheet, write_sheet, append_sheet, create_sheet, list_sheets_in_spreadsheet
+🧠 IA Híbrida [OpenRouter]: Usando google/gemini-2.0-flash-001 (Imágenes: true)
+📡 OpenRouter [google/gemini-2.0-flash-001]
+[26/03/2026 14:41] Jesús Quintero Martínez: hola
+[26/03/2026 14:41] OPENCODEAGENT: ¡Hola! Me alegra conocerte. Como Asistente Ejecutivo Personal, estoy aquí para ayudarte a optimizar tu tiempo y aumentar tu productividad. Puedo ayudarte a gestionar tu agenda, crear eventos y reuniones, modificarlas o cancelarlas, así como también a gestionar tus correos electrónicos, abrir, leer, enviar, eliminar o marcarlos como leídos. Además, puedo ayudarte a cargar y clasificar documentos, fotos y otros archivos en Google Drive, y realizar tareas técnicas complejas con precisión. ¿En qué puedo ayudarte hoy?
+[26/03/2026 14:41] Jesús Quintero Martínez: dame los correos para hoy
+[26/03/2026 14:41] OPENCODEAGENT: Lo siento, pero no puedo acceder a tus correos electrónicos sin la configuración adecuada. ¿Quieres configurar tu cuenta de Gmail para que pueda ayudarte a leer tus correos?
+[26/03/2026 14:41] Jesús Quintero Martínez: dame la agenda de hoy
+[26/03/2026 14:42] OPENCODEAGENT: Lo siento, pero no puedo acceder a tu agenda sin la configuración adecuada. ¿Quieres configurar tu cuenta de Google Calendar para que pueda ayudarte a ver tu agenda de hoy?
+[26/03/2026 14:42] Jesús Quintero Martínez: 
+[26/03/2026 14:42] OPENCODEAGENT: 🎤 Transcribiendo audio...
+[26/03/2026 14:42] OPENCODEAGENT: 📝 Transcripción: " Esto es una prueba, ¿puedes oírme?"
+[26/03/2026 14:42] OPENCODEAGENT: 
+[26/03/2026 14:43] Jesús Quintero Martínez: 
+[26/03/2026 14:43] OPENCODEAGENT: 🎤 Transcribiendo audio...
+[26/03/2026 14:43] OPENCODEAGENT: 📝 Transcripción: " Puedes decirme las carpetas de Google Drive."
+[26/03/2026 14:43] OPENCODEAGENT: 
+[26/03/2026 14:45] Jesús Quintero Martínez: 
+[26/03/2026 14:45] OPENCODEAGENT: 📷 Foto recibida. Analizando...
+[26/03/2026 14:45] OPENCODEAGENT: 📷 Foto recibida. ¿Qué quieres saber sobre ella?
+[26/03/2026 14:45] Jesús Quintero Martínez: todo
+[26/03/2026 14:45] OPENCODEAGENT: ❌ Ocurrió un error procesando tu mensaje. Inténtalo de nuevo.
+[26/03/2026 14:45] Jesús Quintero Martínez: que fecha es hoy
+[26/03/2026 14:45] OPENCODEAGENT: ❌ Ocurrió un error procesando tu mensaje. Inténtalo de nuevo.
+[26/03/2026 14:45] Jesús Quintero Martínez: hola
+[26/03/2026 14:45] OPENCODEAGENT: ❌ Ocurrió un error procesando tu mensaje. Inténtalo de nuevo.

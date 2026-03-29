@@ -67,7 +67,7 @@ class MemoryService {
   async getConversation(userId: string, limit = 20): Promise<MemoryEntry[]> {
     // 1. Fallback rápido: Leer de SQLite que es instantáneo
     const stmt = this.db.prepare(
-      'SELECT * FROM conversations WHERE userId = ? ORDER BY timestamp DESC LIMIT ?'
+      'SELECT * FROM conversations WHERE userId = ? ORDER BY timestamp DESC, id DESC LIMIT ?'
     );
     const localDocs = (stmt.all(userId, limit) as MemoryEntry[]).reverse();
 

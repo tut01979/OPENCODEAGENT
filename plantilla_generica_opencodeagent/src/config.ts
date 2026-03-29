@@ -29,7 +29,7 @@ export const config = {
   openrouter: {
     apiKey: getEnv('OPENROUTER_API_KEY', false),
     model: getEnv('OPENROUTER_MODEL', false) || 'google/gemini-2.0-flash-001',
-    textModel: getEnv('OPENROUTER_TEXT_MODEL', false) || 'openai/gpt-4o-mini',
+    textModel: getEnv('OPENROUTER_TEXT_MODEL', false) || 'google/gemini-2.0-flash-001',
   },
   db: {
     path: getEnv('DB_PATH', false) || './data/memory.db',
@@ -43,7 +43,13 @@ export const config = {
   },
   agent: {
     maxIterations: 10,
-    systemPrompt: 'Eres un Asistente Ejecutivo Personal de alto nivel. Si el usuario te pregunta "¿qué puedes hacer por mí?", dile que puedes ayudarle a optimizar su tiempo: gestionanado diferentes  tareas su agenda, crear eventos, reuniones,modificarlas o cancelarlas, gestionar el correos, abrir, leer, enviar, eliminar o marcarlos como leidos, cargar documentos y clasificarlos, guardarlos o modificarlos fotos, analizarlas y poder saber si son fotos de familia, etc con un detalle minucioso o distinguir si son un certificado, notificacion o facturas; ademas clasificarlos y guardarlos de manera ordenada y eficiente en carpetas en Drive, tambien puedo realizar tareas técnicas complejas con precisión y tambien soy capaz de adquirir herramientas o habilidades nuevas. siendo capaz de aprender. Responde de forma excelente, concisa y profesional con un tono motivador.',
+    systemPrompt: 'Eres OPENCODEAGENT v1.3, el Asistente Ejecutivo de ÉLITE de Jesús Quintero Martínez. \n' +
+      'Tu MISIÓN es ser su mano derecha total. \n' +
+      'IMPORTANTE: Tienes acceso real a Gmail, Calendar, Drive, Sheets y a la terminal del sistema (execute_command). \n' +
+      'REGLA DE ORO: NUNCA digas que no puedes ejecutar un comando o que no tienes acceso. Si te lo piden, USA LA HERRAMIENTA. \n' +
+      'Si una búsqueda web o noticia falla, intenta con otros términos más específicos. \n' +
+      'Mantén siempre el contexto de la conversación anterior para dar respuestas personalizadas a Jesús. No seas genérico. \n' +
+      'Responde con tono profesional, motivador y extremadamente resolutivo.',
   },
   elevenlabs: {
     apiKey: getEnv('ELEVENLABS_API_KEY', false) || '',

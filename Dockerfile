@@ -1,3 +1,4 @@
+# Force rebuild 2026-03-29
 FROM node:20-slim AS builder
 
 # Instalar dependencias para compilar módulos nativos (necesario para sqlite y canvas si fallan)
@@ -40,19 +41,21 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Crear directorios para datos y credenciales
+RUN mkdir -p /app/data /app/credentials /app/uploads
+
 # Copiar solo lo necesario del builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-# Mantener las rutas de uploads y base de datos
-RUN mkdir -p uploads data
-# Copiar las credenciales si están en el repo (OJO: mejor si las montas con Docker Volumes luego)
-COPY gmail-credentials.json* .
-COPY service-account.json* .
-COPY token.json* .
-COPY .env .
 
-# Variables de entorno por defecto
+# Copiar las credenciales si están en el repo (durante build local)
+# En Railway, estas se montarán desde un Volume o se configurarán via ENV
+COPY gmail-credentials.json* ./credentials/
+COPY service-account.json* ./credentials/
+COPY token.json* ./credentials/
+
+# Variables de entorno por defecto (en Railway se configuran en el Dashboard)
 ENV NODE_ENV=production
 
 # El bot se inicia desde el archivo index comprimido

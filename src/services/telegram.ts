@@ -89,6 +89,11 @@ export function createBot(): Bot {
     const userId = ctx.from?.id.toString();
     if (!userId) return;
 
+    processVoiceMessage(ctx, userId);
+  });
+
+  // Procesamiento de voz en background
+  async function processVoiceMessage(ctx: any, userId: string) {
     await ctx.replyWithChatAction('typing');
     await ctx.reply('🎤 Transcribiendo audio...');
 
@@ -122,7 +127,7 @@ export function createBot(): Bot {
       console.error('Error procesando audio:', error);
       await ctx.reply('❌ Error procesando el audio. Inténtalo de nuevo.');
     }
-  });
+  }
 
   // Manejar mensajes de texto
   bot.on('message:text', async (ctx) => {
@@ -134,7 +139,12 @@ export function createBot(): Bot {
     // Ignorar comandos
     if (userMessage.startsWith('/')) return;
 
-    // Indicador de escritura
+    // Lanzar procesamiento en background para no bloquear grammy
+    processTextMessage(ctx, userId, userMessage);
+  });
+
+  // Procesamiento de texto en background (no bloquea el event loop de grammy)
+  async function processTextMessage(ctx: any, userId: string, userMessage: string) {
     await ctx.replyWithChatAction('typing');
 
     try {
@@ -157,7 +167,7 @@ export function createBot(): Bot {
       console.error('Error procesando mensaje:', error);
       await ctx.reply('❌ Ocurrió un error procesando tu mensaje. Inténtalo de nuevo.');
     }
-  });
+  }
 
   // Manejar documentos subidos
   bot.on('message:document', async (ctx) => {
@@ -167,6 +177,11 @@ export function createBot(): Bot {
     const document = ctx.message.document;
     const fileName = document.file_name || `file_${Date.now()}`;
     
+    processDocumentMessage(ctx, userId, document, fileName);
+  });
+
+  // Procesamiento de documentos en background
+  async function processDocumentMessage(ctx: any, userId: string, document: any, fileName: string) {
     await ctx.reply(`📎 Recibido: ${fileName}\n⏳ Descargando...`);
     
     try {
@@ -226,7 +241,7 @@ export function createBot(): Bot {
       console.error('Error procesando archivo:', error);
       await ctx.reply(`✅ Archivo guardado en: ./uploads/${fileName}\n\n⚠️ No pude analizar el contenido automáticamente. Dime "Lee el archivo ./uploads/${fileName}" y lo leeré.`);
     }
-  });
+  }
 
   // Manejar fotos
   bot.on('message:photo', async (ctx) => {
@@ -236,6 +251,11 @@ export function createBot(): Bot {
     const photos = ctx.message.photo;
     const photo = photos[photos.length - 1]; // La más grande
     
+    processPhotoMessage(ctx, userId, photo);
+  });
+
+  // Procesamiento de fotos en background
+  async function processPhotoMessage(ctx: any, userId: string, photo: any) {
     await ctx.reply('📷 Foto recibida. Analizando...');
     await ctx.replyWithChatAction('typing');
     
@@ -264,7 +284,7 @@ export function createBot(): Bot {
       console.error('Error procesando foto:', error);
       await ctx.reply('📷 Foto recibida. ¿Qué quieres saber sobre ella?');
     }
-  });
+  }
 
   return bot;
 }

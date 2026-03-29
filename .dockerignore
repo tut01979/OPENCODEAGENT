@@ -5,6 +5,7 @@ memory.db-journal
 uploads/*
 .git
 .vscode
+.env
 .env.example
 *.mp3
 README.md

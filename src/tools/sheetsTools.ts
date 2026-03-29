@@ -1,12 +1,11 @@
 import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
+import { config } from '../config.js';
 import type { Tool } from './types.js';
 
 const TOKEN_PATH = './token.json';
 const CREDENTIALS_PATH = './gmail-credentials.json';
-
-import { config } from '../config.js';
 
 async function getSheetsClient() {
   // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario)
@@ -15,10 +14,16 @@ async function getSheetsClient() {
       const credentialsContent = fs.readFileSync(path.resolve(CREDENTIALS_PATH), 'utf-8');
       const credentials = JSON.parse(credentialsContent);
       const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-      const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-      
+
+      const oAuth2Client = new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        redirect_uris[0]
+      );
+
       const tokenContent = fs.readFileSync(path.resolve(TOKEN_PATH), 'utf-8');
       oAuth2Client.setCredentials(JSON.parse(tokenContent));
+
       return google.sheets({ version: 'v4', auth: oAuth2Client });
     }
   } catch (err) {
@@ -29,6 +34,7 @@ async function getSheetsClient() {
   try {
     const creds = config.firebase.credentials;
     const credentialsPath = path.isAbsolute(creds) ? creds : path.join(process.cwd(), creds);
+    
     if (fs.existsSync(credentialsPath)) {
       const auth = new google.auth.GoogleAuth({
         keyFile: credentialsPath,
@@ -64,30 +70,28 @@ export const readSheetTool: Tool = {
   execute: async (params) => {
     const spreadsheetId = params.spreadsheet_id as string;
     const range = params.range as string;
-    
     const sheets = await getSheetsClient();
     if (!sheets) {
       return '⚠️ Google Sheets no configurado. Necesitas configurar OAuth2 primero.';
     }
-    
+
     try {
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range,
       });
-      
+
       const rows = response.data.values || [];
-      
       if (rows.length === 0) {
         return 'No se encontraron datos en el rango especificado';
       }
-      
+
       // Formatear como tabla
       let table = '';
       for (let i = 0; i < rows.length; i++) {
         table += rows[i].join(' | ') + '\n';
       }
-      
+
       return `Datos de la hoja:\n\n${table}`;
     } catch (error) {
       return `Error leyendo hoja: ${error instanceof Error ? error.message : String(error)}`;
@@ -120,16 +124,16 @@ export const writeSheetTool: Tool = {
     const spreadsheetId = params.spreadsheet_id as string;
     const range = params.range as string;
     const valuesStr = params.values as string;
-    
+
     const sheets = await getSheetsClient();
     if (!sheets) {
       return '⚠️ Google Sheets no configurado. Necesitas configurar OAuth2 primero.';
     }
-    
+
     try {
       // Parsear valores
       const rows = valuesStr.split(';').map(row => row.split(',').map(cell => cell.trim()));
-      
+
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range,
@@ -138,7 +142,7 @@ export const writeSheetTool: Tool = {
           values: rows,
         },
       });
-      
+
       return `✅ Datos escritos correctamente en ${range}\nFilas: ${rows.length}\nColumnas: ${rows[0]?.length || 0}`;
     } catch (error) {
       return `Error escribiendo en hoja: ${error instanceof Error ? error.message : String(error)}`;
@@ -171,15 +175,15 @@ export const appendSheetTool: Tool = {
     const spreadsheetId = params.spreadsheet_id as string;
     const sheetName = params.sheet_name as string;
     const valuesStr = params.values as string;
-    
+
     const sheets = await getSheetsClient();
     if (!sheets) {
       return '⚠️ Google Sheets no configurado.';
     }
-    
+
     try {
       const rows = valuesStr.split(';').map(row => row.split(',').map(cell => cell.trim()));
-      
+
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: `${sheetName}!A1`,
@@ -189,7 +193,7 @@ export const appendSheetTool: Tool = {
           values: rows,
         },
       });
-      
+
       return `✅ ${rows.length} filas añadidas a ${sheetName}`;
     } catch (error) {
       return `Error añadiendo filas: ${error instanceof Error ? error.message : String(error)}`;
@@ -212,12 +216,11 @@ export const createSheetTool: Tool = {
   },
   execute: async (params) => {
     const title = params.title as string;
-    
     const sheets = await getSheetsClient();
     if (!sheets) {
       return '⚠️ Google Sheets no configurado.';
     }
-    
+
     try {
       const response = await sheets.spreadsheets.create({
         requestBody: {
@@ -226,7 +229,7 @@ export const createSheetTool: Tool = {
           },
         },
       });
-      
+
       return `✅ Spreadsheet creado:\nTítulo: ${response.data.properties?.title}\nID: ${response.data.spreadsheetId}\nLink: ${response.data.spreadsheetUrl}`;
     } catch (error) {
       return `Error creando spreadsheet: ${error instanceof Error ? error.message : String(error)}`;
@@ -249,21 +252,17 @@ export const listSheetsTool: Tool = {
   },
   execute: async (params) => {
     const spreadsheetId = params.spreadsheet_id as string;
-    
     const sheets = await getSheetsClient();
     if (!sheets) {
       return '⚠️ Google Sheets no configurado.';
     }
-    
+
     try {
       const response = await sheets.spreadsheets.get({
         spreadsheetId,
       });
-      
-      const sheetList = response.data.sheets?.map(s => 
-        `- ${s.properties?.title} (ID: ${s.properties?.sheetId})`
-      ).join('\n');
-      
+
+      const sheetList = response.data.sheets?.map(s => `- ${s.properties?.title} (ID: ${s.properties?.sheetId})`).join('\n');
       return `Hojas en "${response.data.properties?.title}":\n\n${sheetList}`;
     } catch (error) {
       return `Error listando hojas: ${error instanceof Error ? error.message : String(error)}`;

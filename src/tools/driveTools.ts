@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
 import type { Tool } from './types.js';
+
+// @ts-ignore
 import { PDFParse } from 'pdf-parse';
 
 const TOKEN_PATH = './token.json';
@@ -15,10 +17,16 @@ async function getDriveClient() {
       const credentialsContent = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
       const credentials = JSON.parse(credentialsContent);
       const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-      const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-      
+
+      const oAuth2Client = new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        redirect_uris[0]
+      );
+
       const tokenContent = fs.readFileSync(TOKEN_PATH, 'utf-8');
       oAuth2Client.setCredentials(JSON.parse(tokenContent));
+
       return google.drive({ version: 'v3', auth: oAuth2Client });
     }
   } catch (err) {
@@ -29,6 +37,7 @@ async function getDriveClient() {
   try {
     const creds = config.firebase.credentials;
     const credentialsPath = path.isAbsolute(creds) ? creds : path.join(process.cwd(), creds);
+    
     if (fs.existsSync(credentialsPath)) {
       const auth = new google.auth.GoogleAuth({
         keyFile: credentialsPath,
@@ -75,16 +84,14 @@ export const readDriveFileTool: Tool = {
       // 2. Si es PDF, lo descargamos y extraemos texto
       if (mimeType === 'application/pdf') {
         const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data as ArrayBuffer);
-        const parser = new PDFParse({ data: buffer });
-        const data = await parser.getText();
+        const buffer = Buffer.from(response.data as any);
+        const data = await PDFParse(buffer);
         return `📄 Contenido de PDF (${name}):\n\n${data.text}`;
       }
 
       // 3. Si es texto plano o similar
       if (mimeType?.includes('text/') || mimeType === 'application/json') {
         const response = await drive.files.get({ fileId, alt: 'media' });
-        // Handle stream vs direct data
         const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
         return `📄 Contenido de archivo (${name}):\n\n${content}`;
       }
@@ -150,29 +157,28 @@ export const uploadFileDriveTool: Tool = {
   },
   execute: async (params) => {
     const filePath = params.file_path as string;
-    const folderId = params.folder_id as string | undefined;
-    const fileName = params.name as string || path.basename(filePath);
-    
+    const folderId = params.folder_id as string;
+    const fileName = (params.name as string) || path.basename(filePath);
+
     const drive = await getDriveClient();
     if (!drive) {
       return '⚠️ Google Drive no configurado. Necesitas configurar OAuth2 primero.';
     }
-    
+
     try {
       const absolutePath = path.resolve(filePath);
-      
       if (!fs.existsSync(absolutePath)) {
         return `Error: Archivo no encontrado: ${absolutePath}`;
       }
-      
-      const fileMetadata: { name: string; parents?: string[] } = {
+
+      const fileMetadata: any = {
         name: fileName,
       };
-      
+
       if (folderId) {
         fileMetadata.parents = [folderId];
       }
-      
+
       const ext = path.extname(absolutePath).toLowerCase();
       let mimeType = 'application/octet-stream';
       if (ext === '.pdf') mimeType = 'application/pdf';
@@ -185,13 +191,13 @@ export const uploadFileDriveTool: Tool = {
         mimeType,
         body: fs.createReadStream(absolutePath),
       };
-      
+
       const response = await drive.files.create({
         requestBody: fileMetadata,
         media: media,
         fields: 'id, name, webViewLink',
       });
-      
+
       return `✅ Archivo subido a Google Drive:\nNombre: ${response.data.name}\nID: ${response.data.id}\nLink: ${response.data.webViewLink}`;
     } catch (error) {
       return `Error subiendo archivo: ${error instanceof Error ? error.message : String(error)}`;
@@ -218,36 +224,32 @@ export const listDriveFilesTool: Tool = {
   },
   execute: async (params) => {
     const maxResults = (params.max_results as number) || 10;
-    const folderId = params.folder_id as string | undefined;
-    
+    const folderId = params.folder_id as string;
+
     const drive = await getDriveClient();
     if (!drive) {
       return '⚠️ Google Drive no configurado.';
     }
-    
+
     try {
       let q = "trashed = false";
       if (folderId) {
         q += ` and '${folderId}' in parents`;
       }
-      
+
       const response = await drive.files.list({
         q,
         pageSize: maxResults,
         fields: 'files(id, name, mimeType, size, webViewLink)',
         orderBy: 'modifiedTime desc',
       });
-      
+
       const files = response.data.files || [];
-      
       if (files.length === 0) {
         return 'No se encontraron archivos en Drive';
       }
-      
-      const fileList = files.map(f => 
-        `- ${f.name} (${f.mimeType})\n  ID: ${f.id}\n  Link: ${f.webViewLink}`
-      );
-      
+
+      const fileList = files.map(f => `- ${f.name} (${f.mimeType})\n  ID: ${f.id}\n  Link: ${f.webViewLink}`);
       return `Archivos en Google Drive:\n\n${fileList.join('\n\n')}`;
     } catch (error) {
       return `Error listando archivos: ${error instanceof Error ? error.message : String(error)}`;
@@ -274,23 +276,22 @@ export const createDriveFolderTool: Tool = {
   },
   execute: async (params) => {
     const name = params.name as string;
-    const parentId = params.parent_id as string | undefined;
-    
+    const parentId = params.parent_id as string;
     const drive = await getDriveClient();
     if (!drive) return '⚠️ Drive no configurado.';
-    
+
     try {
       const fileMetadata = {
         name,
         mimeType: 'application/vnd.google-apps.folder',
         parents: parentId ? [parentId] : undefined,
       };
-      
+
       const response = await drive.files.create({
         requestBody: fileMetadata,
         fields: 'id, name, webViewLink',
-      } as any);
-      
+      });
+
       return `✅ Carpeta creada:\nNombre: ${response.data.name}\nID: ${response.data.id}\nLink: ${response.data.webViewLink}`;
     } catch (error) {
       return `Error creando carpeta: ${error instanceof Error ? error.message : String(error)}`;
@@ -313,10 +314,9 @@ export const deleteDriveFileTool: Tool = {
   },
   execute: async (params) => {
     const fileId = params.file_id as string;
-    
     const drive = await getDriveClient();
     if (!drive) return '⚠️ Drive no configurado.';
-    
+
     try {
       await drive.files.update({
         fileId,

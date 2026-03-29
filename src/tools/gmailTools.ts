@@ -11,22 +11,21 @@ async function getGmailClient() {
   try {
     const credentialsContent = await fs.readFile(path.resolve(CREDENTIALS_PATH), 'utf-8');
     const credentials = JSON.parse(credentialsContent);
-    
     const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-    
+
     const oAuth2Client = new google.auth.OAuth2(
       client_id,
       client_secret,
       redirect_uris[0]
     );
-    
+
     try {
       const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
       oAuth2Client.setCredentials(JSON.parse(tokenContent));
     } catch {
       return null; // No token yet
     }
-    
+
     return google.gmail({ version: 'v1', auth: oAuth2Client });
   } catch {
     return null;
@@ -147,12 +146,40 @@ export const sendEmailTool: Tool = {
   execute: async (params) => {
     const { to, subject, body } = params as any;
     const gmail = await getGmailClient();
-    if (!gmail) return '⚠️';
+    if (!gmail) return '⚠️ Gmail no configurado.';
     try {
       const message = [`To: ${to}`, `Subject: ${subject}`, 'Content-Type: text/html; charset=utf-8', '', body].join('\n');
       const raw = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
       await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
       return `✅ Enviado a ${to}`;
+    } catch (err) { return `Error: ${err}`; }
+  },
+};
+
+export const markEmailAsReadTool: Tool = {
+  name: 'mark_email_as_read',
+  description: 'Marca un email como leído quitando la etiqueta UNREAD.',
+  parameters: {
+    type: 'object',
+    properties: {
+      message_id: { type: 'string', description: 'ID del mensaje obtenido con read_email' },
+    },
+    required: ['message_id'],
+  },
+  execute: async (params) => {
+    const id = params.message_id as string;
+    const gmail = await getGmailClient();
+    if (!gmail) return '⚠️ Gmail no configurado.';
+
+    try {
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id,
+        requestBody: {
+          removeLabelIds: ['UNREAD'],
+        },
+      });
+      return `✅ Email marcado como leído`;
     } catch (err) { return `Error: ${err}`; }
   },
 };

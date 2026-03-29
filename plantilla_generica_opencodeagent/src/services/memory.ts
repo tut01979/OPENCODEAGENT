@@ -65,11 +65,30 @@ class MemoryService {
   }
 
   async getConversation(userId: string, limit = 20): Promise<MemoryEntry[]> {
-    // Si Firebase está conectado, intentar leer de ahí primero para persistencia entre deploys
+    // 1. Fallback rápido: Leer de SQLite que es instantáneo
+    const stmt = this.db.prepare(
+      'SELECT * FROM conversations WHERE userId = ? ORDER BY timestamp DESC, id DESC LIMIT ?'
+    );
+    const localDocs = (stmt.all(userId, limit) as MemoryEntry[]).reverse();
+
+    // 2. Si tenemos historial local, lo usamos directamente para no bloquear con peticiones de red (evita quedarse "queued")
+    if (localDocs.length > 0) {
+      return localDocs;
+    }
+
+    // 3. Si SQLite está vacío (ej. tras redesplegar la app), recuperamos de Firebase
     if (firebase.isConnected()) {
       try {
         const fbDocs = await firebase.getConversation(userId, limit);
         if (fbDocs.length > 0) {
+          // Hidratar SQLite para que los siguientes mensajes sean rápidos
+          const insertStmt = this.db.prepare(
+            'INSERT INTO conversations (userId, role, content) VALUES (?, ?, ?)'
+          );
+          for (const doc of fbDocs) {
+             insertStmt.run(doc.userId, doc.role, doc.content);
+          }
+
           return fbDocs.map((doc, idx) => ({
              id: idx,
              userId: doc.userId,
@@ -79,15 +98,11 @@ class MemoryService {
           }));
         }
       } catch (err) {
-        console.error('Error fallback Firebase:', err);
+        console.error('Error recuperando de Firebase:', err);
       }
     }
     
-    // Fallback a SQLite
-    const stmt = this.db.prepare(
-      'SELECT * FROM conversations WHERE userId = ? ORDER BY timestamp DESC LIMIT ?'
-    );
-    return (stmt.all(userId, limit) as MemoryEntry[]).reverse();
+    return [];
   }
 
   clearConversation(userId: string): void {
