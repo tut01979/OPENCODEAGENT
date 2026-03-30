@@ -5,7 +5,7 @@ import { config } from '../config.js';
 import type { Tool } from './types.js';
 
 // @ts-ignore
-import { PDFParse } from 'pdf-parse';
+import PDFParse from 'pdf-parse';
 
 const TOKEN_PATH = './token.json';
 const CREDENTIALS_PATH = './gmail-credentials.json';
@@ -127,7 +127,7 @@ export const searchDriveFilesTool: Tool = {
       const files = response.data.files || [];
       if (files.length === 0) return `No se encontraron archivos que coincidan con "${qTerm}"`;
 
-      return `Resultados de búsqueda:\n\n` + files.map(f => `- ${f.name} (${f.mimeType})\n  ID: ${f.id}\n  Link: ${f.webViewLink}`).join('\n\n');
+      return `Resultados de búsqueda:\n\n` + files.map(f => `- ${f.name || 'Sin nombre'} (${f.mimeType || 'Sin tipo'})\n  ID: ${f.id || 'Sin ID'}\n  Link: ${f.webViewLink || 'Sin link'}`).join('\n\n');
     } catch (error) {
       return `Error buscando en Drive: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -198,7 +198,7 @@ export const uploadFileDriveTool: Tool = {
         fields: 'id, name, webViewLink',
       });
 
-      return `✅ Archivo subido a Google Drive:\nNombre: ${response.data.name}\nID: ${response.data.id}\nLink: ${response.data.webViewLink}`;
+      return `✅ Archivo subido a Google Drive:\nNombre: ${response.data.name || 'Sin nombre'}\nID: ${response.data.id || 'Sin ID'}\nLink: ${response.data.webViewLink || 'Sin link'}`;
     } catch (error) {
       return `Error subiendo archivo: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -249,7 +249,7 @@ export const listDriveFilesTool: Tool = {
         return 'No se encontraron archivos en Drive';
       }
 
-      const fileList = files.map(f => `- ${f.name} (${f.mimeType})\n  ID: ${f.id}\n  Link: ${f.webViewLink}`);
+      const fileList = files.map(f => `- ${f.name || 'Sin nombre'} (${f.mimeType || 'Sin tipo'})\n  ID: ${f.id || 'Sin ID'}\n  Link: ${f.webViewLink || 'Sin link'}`);
       return `Archivos en Google Drive:\n\n${fileList.join('\n\n')}`;
     } catch (error) {
       return `Error listando archivos: ${error instanceof Error ? error.message : String(error)}`;
