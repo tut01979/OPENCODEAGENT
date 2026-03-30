@@ -13,7 +13,7 @@ export const getCurrentTimeTool: Tool = {
     },
     required: [],
   },
-  execute: (params) => {
+  execute: async (params, userId) => {
     const timezone = (params.timezone as string) || 'UTC';
     const now = new Date();
     try {

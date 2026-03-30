@@ -178,7 +178,7 @@ export const webSearchTool: Tool = {
     },
     required: ['query'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const query = params.query as string;
     const maxResults = (params.max_results as number) || 5;
     const searchType = (params.search_type as string) || 'web';

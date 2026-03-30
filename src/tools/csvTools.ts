@@ -23,7 +23,7 @@ export const createCSVTool: Tool = {
     },
     required: ['filename', 'headers', 'rows'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const filename = params.filename as string;
     const headers = params.headers as string;
     const rows = params.rows as string;
@@ -67,7 +67,7 @@ export const readCSVTool: Tool = {
     },
     required: ['filename'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const filename = params.filename as string;
     
     try {

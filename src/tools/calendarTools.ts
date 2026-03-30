@@ -6,30 +6,40 @@ import type { Tool } from './types.js';
 const TOKEN_PATH = './data/token.json';
 const CREDENTIALS_PATH = './data/gmail-credentials.json';
 
-async function getCalendarClient() {
+import { firebase } from '../services/firebase.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
+
+async function getCalendarClient(userId: string) {
   try {
-    const credentialsContent = await fs.readFile(path.resolve(CREDENTIALS_PATH), 'utf-8');
-    const credentials = JSON.parse(credentialsContent);
-    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+    const oAuth2Client = getClientBase();
+    if (!oAuth2Client) return null;
 
-    const oAuth2Client = new google.auth.OAuth2(
-      client_id,
-      client_secret,
-      redirect_uris[0]
-    );
-
-    try {
-      const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
-      oAuth2Client.setCredentials(JSON.parse(tokenContent));
-    } catch {
-      return null;
+    const userToken = await firebase.getUserToken(userId);
+    if (userToken) {
+      oAuth2Client.setCredentials(userToken);
+      return google.calendar({ version: 'v3', auth: oAuth2Client });
     }
 
-    return google.calendar({ version: 'v3', auth: oAuth2Client });
+    try {
+      const TOKEN_PATH = './data/token.json';
+      const fsSync = await import('fs');
+      if (fsSync.existsSync(TOKEN_PATH)) {
+        const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
+        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+        return google.calendar({ version: 'v3', auth: oAuth2Client });
+      }
+    } catch {}
+
+    return null;
   } catch {
     return null;
   }
 }
+
+const AUTH_ERROR_MSG = (userId: string) => {
+  const url = generateAuthUrl(userId);
+  return `⚠️ No estás conectado con Google. Para gestionar tu calendario, autoriza el acceso aquí:\n\n🔗 ${url}\n\nUna vez hecho, vuelve a pedirme la tarea.`;
+};
 
 export const createEventTool: Tool = {
   name: 'create_event',
@@ -60,17 +70,15 @@ export const createEventTool: Tool = {
     },
     required: ['summary', 'start_datetime', 'end_datetime'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const summary = params.summary as string;
     const description = (params.description as string) || '';
     const startDatetime = params.start_datetime as string;
     const endDatetime = params.end_datetime as string;
     const timezone = (params.timezone as string) || 'Europe/Madrid';
     
-    const calendar = await getCalendarClient();
-    if (!calendar) {
-      return '⚠️ Google Calendar no configurado. Necesitas configurar OAuth2 primero.';
-    }
+    const calendar = await getCalendarClient(userId);
+    if (!calendar) return AUTH_ERROR_MSG(userId);
     
     try {
       const event = {
@@ -115,14 +123,12 @@ export const listEventsTool: Tool = {
     },
     required: [],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const maxResults = (params.max_results as number) || 10;
     const daysAhead = (params.days_ahead as number) || 7;
     
-    const calendar = await getCalendarClient();
-    if (!calendar) {
-      return '⚠️ Google Calendar no configurado. Necesitas configurar OAuth2 primero.';
-    }
+    const calendar = await getCalendarClient(userId);
+    if (!calendar) return AUTH_ERROR_MSG(userId);
     
     try {
       const now = new Date();

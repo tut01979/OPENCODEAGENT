@@ -15,7 +15,7 @@ export const readFileTool: Tool = {
     },
     required: ['path'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const filePath = params.path as string;
     
     try {
@@ -51,7 +51,7 @@ export const writeFileTool: Tool = {
     },
     required: ['path', 'content'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const filePath = params.path as string;
     const content = params.content as string;
     

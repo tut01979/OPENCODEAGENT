@@ -42,7 +42,7 @@ export function getToolsForAPI(): Array<{
   }));
 }
 
-export async function executeToolCall(toolCall: ToolCall): Promise<Message> {
+export async function executeToolCall(toolCall: ToolCall, userId: string): Promise<Message> {
   const tool = getTool(toolCall.name);
   if (!tool) {
     return {
@@ -53,7 +53,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<Message> {
   }
 
   try {
-    const result = await tool.execute(toolCall.arguments);
+    const result = await tool.execute(toolCall.arguments, userId);
     return {
       role: 'tool',
       content: result,

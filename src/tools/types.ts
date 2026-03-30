@@ -10,7 +10,7 @@ export interface Tool {
     }>;
     required?: string[];
   };
-  execute: (params: Record<string, unknown>) => Promise<string> | string;
+  execute: (params: Record<string, unknown>, userId: string) => Promise<string> | string;
 }
 
 export interface ToolCall {

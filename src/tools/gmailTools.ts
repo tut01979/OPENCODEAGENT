@@ -4,33 +4,44 @@ import fs_sync from 'fs';
 import path from 'path';
 import type { Tool } from './types.js';
 
-const TOKEN_PATH = './data/token.json';
-const CREDENTIALS_PATH = './data/gmail-credentials.json';
+import { firebase } from '../services/firebase.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
 
-async function getGmailClient() {
+async function getGmailClient(userId: string) {
   try {
-    const credentialsContent = await fs.readFile(path.resolve(CREDENTIALS_PATH), 'utf-8');
-    const credentials = JSON.parse(credentialsContent);
-    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+    const oAuth2Client = getClientBase();
+    if (!oAuth2Client) return null;
 
-    const oAuth2Client = new google.auth.OAuth2(
-      client_id,
-      client_secret,
-      redirect_uris[0]
-    );
-
-    try {
-      const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
-      oAuth2Client.setCredentials(JSON.parse(tokenContent));
-    } catch {
-      return null; // No token yet
+    // 1. Intentar obtener token de Firebase para este usuario específico
+    const userToken = await firebase.getUserToken(userId);
+    
+    if (userToken) {
+      oAuth2Client.setCredentials(userToken);
+      return google.gmail({ version: 'v1', auth: oAuth2Client });
     }
 
-    return google.gmail({ version: 'v1', auth: oAuth2Client });
+    // 2. FALLBACK: Si no hay token de usuario, intentar cargar el token por defecto (solo para admins o si existe)
+    try {
+      const TOKEN_PATH = './data/token.json';
+      if (fs_sync.existsSync(TOKEN_PATH)) {
+        const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
+        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+        return google.gmail({ version: 'v1', auth: oAuth2Client });
+      }
+    } catch {
+      // Ignorar fallback si falla
+    }
+
+    return null;
   } catch {
     return null;
   }
 }
+
+const AUTH_ERROR_MSG = (userId: string) => {
+  const url = generateAuthUrl(userId);
+  return `⚠️ No estás conectado con Google. Para usar esta herramienta, por favor autoriza el acceso aquí:\n\n🔗 ${url}\n\nUna vez hecho, vuelve a intentarlo.`;
+};
 
 export const readEmailTool: Tool = {
   name: 'read_email',
@@ -42,11 +53,11 @@ export const readEmailTool: Tool = {
       query: { type: 'string', description: 'Filtro (ej: "is:unread")' },
     },
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const maxResults = (params.max_results as number) || 5;
     const query = (params.query as string) || '';
-    const gmail = await getGmailClient();
-    if (!gmail) return '⚠️ Gmail no configurado.';
+    const gmail = await getGmailClient(userId);
+    if (!gmail) return AUTH_ERROR_MSG(userId);
 
     try {
       const response = await gmail.users.messages.list({ userId: 'me', maxResults, q: query });
@@ -76,10 +87,10 @@ export const getEmailDetailsTool: Tool = {
     },
     required: ['message_id'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const id = params.message_id as string;
-    const gmail = await getGmailClient();
-    if (!gmail) return '⚠️ Gmail no configurado.';
+    const gmail = await getGmailClient(userId);
+    if (!gmail) return AUTH_ERROR_MSG(userId);
 
     try {
       const msg = await gmail.users.messages.get({ userId: 'me', id });
@@ -114,10 +125,10 @@ export const downloadAttachmentTool: Tool = {
     },
     required: ['message_id', 'attachment_id', 'filename'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const { message_id, attachment_id, filename } = params as any;
-    const gmail = await getGmailClient();
-    if (!gmail) return '⚠️ Gmail no configurado.';
+    const gmail = await getGmailClient(userId);
+    if (!gmail) return AUTH_ERROR_MSG(userId);
 
     try {
       const res = await gmail.users.messages.attachments.get({ userId: 'me', messageId: message_id, id: attachment_id });
@@ -143,10 +154,10 @@ export const sendEmailTool: Tool = {
     },
     required: ['to', 'subject', 'body'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const { to, subject, body } = params as any;
-    const gmail = await getGmailClient();
-    if (!gmail) return '⚠️ Gmail no configurado.';
+    const gmail = await getGmailClient(userId);
+    if (!gmail) return AUTH_ERROR_MSG(userId);
     try {
       const message = [`To: ${to}`, `Subject: ${subject}`, 'Content-Type: text/html; charset=utf-8', '', body].join('\n');
       const raw = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -166,10 +177,10 @@ export const markEmailAsReadTool: Tool = {
     },
     required: ['message_id'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const id = params.message_id as string;
-    const gmail = await getGmailClient();
-    if (!gmail) return '⚠️ Gmail no configurado.';
+    const gmail = await getGmailClient(userId);
+    if (!gmail) return AUTH_ERROR_MSG(userId);
 
     try {
       await gmail.users.messages.modify({

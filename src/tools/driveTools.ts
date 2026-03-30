@@ -8,37 +8,34 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const PDFParse = require('pdf-parse');
 
-const TOKEN_PATH = './data/token.json';
-const CREDENTIALS_PATH = './data/gmail-credentials.json';
+import { firebase } from '../services/firebase.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
 
-async function getDriveClient() {
-  // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario)
+async function getDriveClient(userId: string) {
   try {
-    if (fs.existsSync(TOKEN_PATH) && fs.existsSync(CREDENTIALS_PATH)) {
-      const credentialsContent = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-      const credentials = JSON.parse(credentialsContent);
-      const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+    const oAuth2Client = getClientBase();
+    if (!oAuth2Client) return null;
 
-      const oAuth2Client = new google.auth.OAuth2(
-        client_id,
-        client_secret,
-        redirect_uris[0]
-      );
-
-      const tokenContent = fs.readFileSync(TOKEN_PATH, 'utf-8');
-      oAuth2Client.setCredentials(JSON.parse(tokenContent));
-
+    // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario desde Firebase)
+    const userToken = await firebase.getUserToken(userId);
+    if (userToken) {
+      oAuth2Client.setCredentials(userToken);
       return google.drive({ version: 'v3', auth: oAuth2Client });
     }
-  } catch (err) {
-    console.warn('Fallo OAuth2 en Drive:', err);
-  }
 
-  // 2. FALLBACK: Service Account
-  try {
+    // 2. FALLBACK 1: OAuth2 por defecto (archivo token.json)
+    try {
+      const TOKEN_PATH = './data/token.json';
+      if (fs.existsSync(TOKEN_PATH)) {
+        const tokenContent = fs.readFileSync(TOKEN_PATH, 'utf-8');
+        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+        return google.drive({ version: 'v3', auth: oAuth2Client });
+      }
+    } catch {}
+
+    // 3. FALLBACK 2: Service Account
     const creds = config.firebase.credentials;
     const credentialsPath = path.isAbsolute(creds) ? creds : path.join(process.cwd(), creds);
-    
     if (fs.existsSync(credentialsPath)) {
       const auth = new google.auth.GoogleAuth({
         keyFile: credentialsPath,
@@ -48,11 +45,15 @@ async function getDriveClient() {
       return google.drive({ version: 'v3', auth: authClient as any });
     }
   } catch (err) {
-    console.warn('Fallo Service Account en Drive:', err);
+    console.warn('Fallo en Drive Client:', err);
   }
-
   return null;
 }
+
+const AUTH_ERROR_MSG = (userId: string) => {
+  const url = generateAuthUrl(userId);
+  return `⚠️ No estás conectado con Google. Para acceder a tus archivos de Drive, autoriza aquí:\n\n🔗 ${url}\n\nDespués de autorizar, repíteme tu solicitud.`;
+};
 
 export const readDriveFileTool: Tool = {
   name: 'read_drive_file',
@@ -64,10 +65,10 @@ export const readDriveFileTool: Tool = {
     },
     required: ['file_id'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const fileId = params.file_id as string;
-    const drive = await getDriveClient();
-    if (!drive) return '⚠️ Drive no configurado.';
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       const metadata = await drive.files.get({ fileId, fields: 'name, mimeType' });
@@ -114,10 +115,10 @@ export const searchDriveFilesTool: Tool = {
     },
     required: ['query'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const qTerm = params.query as string;
-    const drive = await getDriveClient();
-    if (!drive) return '⚠️ Drive no configurado.';
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       const response = await drive.files.list({
@@ -156,15 +157,13 @@ export const uploadFileDriveTool: Tool = {
     },
     required: ['file_path'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const filePath = params.file_path as string;
     const folderId = params.folder_id as string;
     const fileName = (params.name as string) || path.basename(filePath);
 
-    const drive = await getDriveClient();
-    if (!drive) {
-      return '⚠️ Google Drive no configurado. Necesitas configurar OAuth2 primero.';
-    }
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       const absolutePath = path.resolve(filePath);
@@ -223,14 +222,12 @@ export const listDriveFilesTool: Tool = {
     },
     required: [],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const maxResults = (params.max_results as number) || 10;
     const folderId = params.folder_id as string;
 
-    const drive = await getDriveClient();
-    if (!drive) {
-      return '⚠️ Google Drive no configurado.';
-    }
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       let q = "trashed = false";
@@ -275,11 +272,11 @@ export const createDriveFolderTool: Tool = {
     },
     required: ['name'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const name = params.name as string;
     const parentId = params.parent_id as string;
-    const drive = await getDriveClient();
-    if (!drive) return '⚠️ Drive no configurado.';
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       const fileMetadata = {
@@ -313,10 +310,10 @@ export const deleteDriveFileTool: Tool = {
     },
     required: ['file_id'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const fileId = params.file_id as string;
-    const drive = await getDriveClient();
-    if (!drive) return '⚠️ Drive no configurado.';
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       await drive.files.update({

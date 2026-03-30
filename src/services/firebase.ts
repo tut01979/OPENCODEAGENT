@@ -97,18 +97,43 @@ class FirebaseService {
 
   async clearConversation(userId: string): Promise<void> {
     if (!this.db) return;
-
     try {
-      const snapshot = await this.db
-        .collection('conversations')
+      const snapshot = await this.db.collection('conversations')
         .where('userId', '==', userId)
         .get();
-
+      
       const batch = this.db.batch();
-      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
       await batch.commit();
     } catch (error) {
-      console.error('Error limpiando conversación de Firebase:', error);
+      console.error('Error limpiando conversación en Firebase:', error);
+    }
+  }
+
+  async saveUserToken(userId: string, token: any): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.collection('users_config').doc(userId).set({
+        token,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      console.log(`📡 Token de Google guardado para el usuario: ${userId}`);
+    } catch (error) {
+      console.error(`Error guardando token para ${userId}:`, error);
+    }
+  }
+
+  async getUserToken(userId: string): Promise<any | null> {
+    if (!this.db) return null;
+    try {
+      const doc = await this.db.collection('users_config').doc(userId).get();
+      if (!doc.exists) return null;
+      return doc.data()?.token || null;
+    } catch (error) {
+      console.error(`Error obteniendo token para ${userId}:`, error);
+      return null;
     }
   }
 

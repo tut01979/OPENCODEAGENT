@@ -1,54 +1,43 @@
-import { google } from 'googleapis';
-import fs from 'fs';
+import fs from 'fs/promises';
+import fs_sync from 'fs';
 import path from 'path';
+import { google } from 'googleapis';
 import { config } from '../config.js';
 import type { Tool } from './types.js';
 
-const TOKEN_PATH = './token.json';
-const CREDENTIALS_PATH = './gmail-credentials.json';
+import { firebase } from '../services/firebase.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
 
-async function getSheetsClient() {
-  // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario)
+async function getSheetsClient(userId: string) {
   try {
-    if (fs.existsSync(TOKEN_PATH) && fs.existsSync(CREDENTIALS_PATH)) {
-      const credentialsContent = fs.readFileSync(path.resolve(CREDENTIALS_PATH), 'utf-8');
-      const credentials = JSON.parse(credentialsContent);
-      const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+    const oAuth2Client = getClientBase();
+    if (!oAuth2Client) return null;
 
-      const oAuth2Client = new google.auth.OAuth2(
-        client_id,
-        client_secret,
-        redirect_uris[0]
-      );
-
-      const tokenContent = fs.readFileSync(path.resolve(TOKEN_PATH), 'utf-8');
-      oAuth2Client.setCredentials(JSON.parse(tokenContent));
-
+    const userToken = await firebase.getUserToken(userId);
+    if (userToken) {
+      oAuth2Client.setCredentials(userToken);
       return google.sheets({ version: 'v4', auth: oAuth2Client });
     }
-  } catch (err) {
-    console.warn('Fallo OAuth2 en Sheets:', err);
-  }
 
-  // 2. FALLBACK: Service Account
-  try {
-    const creds = config.firebase.credentials;
-    const credentialsPath = path.isAbsolute(creds) ? creds : path.join(process.cwd(), creds);
-    
-    if (fs.existsSync(credentialsPath)) {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: credentialsPath,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-      });
-      const authClient = await auth.getClient();
-      return google.sheets({ version: 'v4', auth: authClient as any });
-    }
-  } catch (err) {
-    console.warn('Fallo Service Account en Sheets:', err);
-  }
+    try {
+      const TOKEN_PATH = './data/token.json';
+      if (fs_sync.existsSync(TOKEN_PATH)) {
+        const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
+        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+        return google.sheets({ version: 'v4', auth: oAuth2Client });
+      }
+    } catch {}
 
-  return null;
+    return null;
+  } catch {
+    return null;
+  }
 }
+
+const AUTH_ERROR_MSG = (userId: string) => {
+  const url = generateAuthUrl(userId);
+  return `⚠️ No estás conectado con Google. Para gestionar tus Google Sheets, autoriza aquí:\n\n🔗 ${url}\n\nDespués, inténtalo de nuevo.`;
+};
 
 export const readSheetTool: Tool = {
   name: 'read_sheet',
@@ -67,13 +56,11 @@ export const readSheetTool: Tool = {
     },
     required: ['spreadsheet_id', 'range'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const spreadsheetId = params.spreadsheet_id as string;
     const range = params.range as string;
-    const sheets = await getSheetsClient();
-    if (!sheets) {
-      return '⚠️ Google Sheets no configurado. Necesitas configurar OAuth2 primero.';
-    }
+    const sheets = await getSheetsClient(userId);
+    if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
       const response = await sheets.spreadsheets.values.get({
@@ -120,15 +107,13 @@ export const writeSheetTool: Tool = {
     },
     required: ['spreadsheet_id', 'range', 'values'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const spreadsheetId = params.spreadsheet_id as string;
     const range = params.range as string;
     const valuesStr = params.values as string;
 
-    const sheets = await getSheetsClient();
-    if (!sheets) {
-      return '⚠️ Google Sheets no configurado. Necesitas configurar OAuth2 primero.';
-    }
+    const sheets = await getSheetsClient(userId);
+    if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
       // Parsear valores
@@ -171,15 +156,13 @@ export const appendSheetTool: Tool = {
     },
     required: ['spreadsheet_id', 'sheet_name', 'values'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const spreadsheetId = params.spreadsheet_id as string;
     const sheetName = params.sheet_name as string;
     const valuesStr = params.values as string;
 
-    const sheets = await getSheetsClient();
-    if (!sheets) {
-      return '⚠️ Google Sheets no configurado.';
-    }
+    const sheets = await getSheetsClient(userId);
+    if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
       const rows = valuesStr.split(';').map(row => row.split(',').map(cell => cell.trim()));
@@ -214,12 +197,10 @@ export const createSheetTool: Tool = {
     },
     required: ['title'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const title = params.title as string;
-    const sheets = await getSheetsClient();
-    if (!sheets) {
-      return '⚠️ Google Sheets no configurado.';
-    }
+    const sheets = await getSheetsClient(userId);
+    if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
       const response = await sheets.spreadsheets.create({
@@ -250,12 +231,10 @@ export const listSheetsTool: Tool = {
     },
     required: ['spreadsheet_id'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const spreadsheetId = params.spreadsheet_id as string;
-    const sheets = await getSheetsClient();
-    if (!sheets) {
-      return '⚠️ Google Sheets no configurado.';
-    }
+    const sheets = await getSheetsClient(userId);
+    if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
       const response = await sheets.spreadsheets.get({

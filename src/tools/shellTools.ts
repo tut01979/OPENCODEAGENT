@@ -21,7 +21,7 @@ export const executeCommandTool: Tool = {
     },
     required: ['command'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const command = params.command as string;
     const timeout = (params.timeout as number) || 30000;
     

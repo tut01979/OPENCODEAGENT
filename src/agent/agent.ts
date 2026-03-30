@@ -82,7 +82,7 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
     // Execute tool calls
     for (const toolCall of response.toolCalls) {
       usedTools.push(toolCall.name);
-      const result = await executeToolCall(toolCall);
+      const result = await executeToolCall(toolCall, userId);
       messages.push({
         role: 'assistant',
         content: null,

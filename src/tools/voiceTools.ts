@@ -16,7 +16,7 @@ export const textToSpeechTool: Tool = {
     },
     required: ['text'],
   },
-  execute: async (params) => {
+  execute: async (params, userId) => {
     const text = params.text as string;
     const truncatedText = text.length > 2000 ? text.slice(0, 2000) + '...' : text;
     const outputPath = path.resolve(`./temp_voice_${Date.now()}.mp3`);
