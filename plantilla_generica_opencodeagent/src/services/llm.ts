@@ -68,9 +68,26 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
     return false;
   });
   
+  // Groq no soporta imágenes, saltar si hay contenido multimodal
+  if (hasImages) {
+    throw new Error('Groq no soporta imágenes, saltando...');
+  }
+  
   // Groq para texto de alta velocidad (usando 70B para mejor razonamiento)
   const model = config.groq.model;
   console.log(`🤖 Groq (Text): ${model} | hasImages: ${hasImages}`);
+
+  // Convertir contenido multimodal a string (por si hay arrays en el historial)
+  const cleanedMessages = messages.map(m => {
+    if (Array.isArray(m.content)) {
+      // Extraer solo texto del contenido multimodal
+      const textParts = (m.content as any[])
+        .filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text);
+      return { ...m, content: textParts.join('\n') || '[Contenido multimodal - imagen no disponible]' };
+    }
+    return m;
+  });
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -80,7 +97,7 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
     },
     body: JSON.stringify({
       model,
-      messages,
+      messages: cleanedMessages,
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,

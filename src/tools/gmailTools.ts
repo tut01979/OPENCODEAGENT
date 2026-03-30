@@ -4,8 +4,8 @@ import fs_sync from 'fs';
 import path from 'path';
 import type { Tool } from './types.js';
 
-const TOKEN_PATH = './token.json';
-const CREDENTIALS_PATH = './gmail-credentials.json';
+const TOKEN_PATH = './data/token.json';
+const CREDENTIALS_PATH = './data/gmail-credentials.json';
 
 async function getGmailClient() {
   try {

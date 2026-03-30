@@ -17,12 +17,14 @@ export function setupCron(bot: Bot) {
   cron.schedule(schedule, async () => {
     console.log('✨ Iniciando resumen ejecutivo diario...');
     try {
-      const prompt = `Buen día, aquí tienes tu resumen diario: 
-      1. Revisa mis eventos del calendario de hoy.
-      2. Revisa correos recibidos y facturas nuevas.
-      3. Confirma archivos guardados en el Drive de la empresa.
-      MUY IMPORTANTE: Tu respuesta DEBE ser en español con un tono ejecutivo y motivador: 
-      'Buen día, aquí tienes tu resumen diario: tienes [X] eventos programados para hoy... a las 8:am gimnasio... a las 10:am proveedores... Estas son las facturas recibidas [de X y de Y] y ya están organizadas en tu Drive. Hoy es un gran día y vamos a sacarle partido. ¡Vamos!'`;
+      const prompt = `EJECUTA ESTAS TAREAS EN ORDEN USANDO LAS HERRAMIENTAS:
+
+1. USA la herramienta "list_events" con days_ahead=1 para obtener los eventos de HOY del calendario de Google.
+2. USA la herramienta "read_email" con query="is:unread" y max_results=5 para ver los correos sin leer.
+
+IMPORTANTE: DEBES usar las herramientas list_events y read_email. No inventes eventos ni correos.
+
+Luego responde en español con tono ejecutivo y motivador: "Buen día, aquí tienes tu resumen diario: tienes [X] eventos programados para hoy... [lista los eventos con hora]... Tienes [Y] correos sin leer: [de quién y sobre qué]... ¡Hoy es un gran día!"`;
       
       const result = await runAgent(targetUser, prompt);
       

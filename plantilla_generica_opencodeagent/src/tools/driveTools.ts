@@ -8,8 +8,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const PDFParse = require('pdf-parse');
 
-const TOKEN_PATH = './token.json';
-const CREDENTIALS_PATH = './gmail-credentials.json';
+const TOKEN_PATH = './data/token.json';
+const CREDENTIALS_PATH = './data/gmail-credentials.json';
 
 async function getDriveClient() {
   // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario)
