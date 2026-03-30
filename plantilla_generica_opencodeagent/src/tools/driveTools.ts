@@ -4,8 +4,9 @@ import path from 'path';
 import { config } from '../config.js';
 import type { Tool } from './types.js';
 
-// @ts-ignore
-import PDFParse from 'pdf-parse';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const PDFParse = require('pdf-parse');
 
 const TOKEN_PATH = './token.json';
 const CREDENTIALS_PATH = './gmail-credentials.json';
