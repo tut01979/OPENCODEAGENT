@@ -5,18 +5,55 @@ import fs from 'fs';
 import path from 'path';
 
 // Configuración de credenciales de Google
-const CREDENTIALS_PATH = './data/gmail-credentials.json';
+let CREDENTIALS_PATH = './credentials/gmail-credentials.json';
+
+// Fallback al antiguo directorio data por retrocompatibilidad
+if (!fs.existsSync(CREDENTIALS_PATH)) {
+  CREDENTIALS_PATH = './data/gmail-credentials.json';
+}
 
 export function getOAuth2Client() {
-  if (!fs.existsSync(CREDENTIALS_PATH)) {
-    console.error('❌ Falta data/gmail-credentials.json. Configúralo primero.');
-    return null;
+  let credentials;
+  
+  // NATIVO CLOUD: Priorizar variable de entorno con el JSON puro antes que archivos
+  if (process.env.GMAIL_CREDENTIALS_JSON) {
+    console.log("🔑 Usando GMAIL_CREDENTIALS_JSON desde variables de entorno");
+    credentials = JSON.parse(process.env.GMAIL_CREDENTIALS_JSON);
+  } else {
+    // FALLBACK LOCAL: Si no hay variable, leemos archivo físico
+    if (!fs.existsSync(CREDENTIALS_PATH)) {
+      console.error(`❌ Falta ${CREDENTIALS_PATH} o la variable GMAIL_CREDENTIALS_JSON. Configúralos primero.`);
+      return null;
+    }
+    credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf-8'));
   }
-  const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf-8'));
+  
   const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
   
-  // Usaremos el primer redirect URI que tengamos (idealmente apuntando a Railway)
-  return new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+  // DETECCIÓN DINÁMICA DE REDIRECT URI
+  let redirectUri = redirect_uris[0];
+  
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    redirectUri = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/auth/google/callback`;
+  } else if (process.env.NODE_ENV === 'production') {
+    redirectUri = 'https://opencodeagent-production.up.railway.app/auth/google/callback';
+  }
+
+  return new google.auth.OAuth2(client_id, client_secret, redirectUri);
+}
+
+/**
+ * Obtiene el token maestro del administrador si está configurado en env
+ */
+export function getMasterToken() {
+  if (process.env.GMAIL_TOKEN_JSON) {
+    try {
+      return JSON.parse(process.env.GMAIL_TOKEN_JSON);
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 export function generateAuthUrl(userId: string) {

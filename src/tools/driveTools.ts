@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const PDFParse = require('pdf-parse');
 
 import { firebase } from '../services/firebase.js';
-import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase, getMasterToken } from '../services/auth.js';
 
 async function getDriveClient(userId: string) {
   try {
@@ -23,26 +23,13 @@ async function getDriveClient(userId: string) {
       return google.drive({ version: 'v3', auth: oAuth2Client });
     }
 
-    // 2. FALLBACK 1: OAuth2 por defecto (archivo token.json)
-    try {
-      const TOKEN_PATH = './data/token.json';
-      if (fs.existsSync(TOKEN_PATH)) {
-        const tokenContent = fs.readFileSync(TOKEN_PATH, 'utf-8');
-        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+    // 🛡️ MASTER TOKEN FALLBACK (Solo Administrador)
+    if (userId === config.telegram.adminId) {
+      const masterToken = getMasterToken();
+      if (masterToken) {
+        oAuth2Client.setCredentials(masterToken);
         return google.drive({ version: 'v3', auth: oAuth2Client });
       }
-    } catch {}
-
-    // 3. FALLBACK 2: Service Account
-    const creds = config.firebase.credentials;
-    const credentialsPath = path.isAbsolute(creds) ? creds : path.join(process.cwd(), creds);
-    if (fs.existsSync(credentialsPath)) {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: credentialsPath,
-        scopes: ['https://www.googleapis.com/auth/drive'],
-      });
-      const authClient = await auth.getClient();
-      return google.drive({ version: 'v3', auth: authClient as any });
     }
   } catch (err) {
     console.warn('Fallo en Drive Client:', err);

@@ -49,11 +49,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 
-# Copiar las credenciales si están en el repo (durante build local)
-# En Railway, estas se montarán desde un Volume o se configurarán via ENV
-COPY gmail-credentials.json* ./credentials/
-COPY service-account.json* ./credentials/
-COPY token.json* ./credentials/
+# Forzamos copiar desde /app/data (builder) hacia ./credentials para que
+# los archivos actualizados anulen los del volumen persistente en Railway.
+COPY --from=builder /app/data/gmail-credentials.json* ./credentials/
+COPY --from=builder /app/service-account.json* ./
+COPY --from=builder /app/token.json* ./
 
 # Variables de entorno por defecto (en Railway se configuran en el Dashboard)
 ENV NODE_ENV=production

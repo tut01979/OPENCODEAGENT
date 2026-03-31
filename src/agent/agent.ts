@@ -55,42 +55,57 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
   
   console.log(`🛠️ Agent [${userId}]: Enviando ${tools.length} herramientas al LLM: ${tools.map(t => t.function.name).join(', ')}`);
 
-  while (iterations < config.agent.maxIterations) {
-    iterations++;
+    while (iterations < config.agent.maxIterations) {
+      iterations++;
 
-    const response = await chat(messages, tools);
+      const response = await chat(messages, tools);
+      console.log(`🧠 Agente iteración ${iterations}: content=${!!response.content}, toolCalls=${response.toolCalls?.length || 0}`);
 
-    // Si no hay respuesta válida, devolver mensaje genérico
-    if (!response.content && !response.toolCalls) {
-      memory.saveMessage(userId, 'assistant', '¿En qué puedo ayudarte?');
-      return { response: '¿En qué puedo ayudarte?', iterations, usedTools };
-    }
-
-    // If no tool calls, we have a final response
-    if (!response.toolCalls || response.toolCalls.length === 0) {
-      let finalResponse = response.content;
-      
-      // Si no hay contenido, responder genéricamente
-      if (!finalResponse) {
-        finalResponse = '¿En qué puedo ayudarte?';
+      // Si no hay respuesta válida, devolver mensaje genérico
+      if (!response.content && !response.toolCalls) {
+        memory.saveMessage(userId, 'assistant', '¿En qué puedo ayudarte?');
+        return { response: '¿En qué puedo ayudarte?', iterations, usedTools };
       }
-      
-      memory.saveMessage(userId, 'assistant', finalResponse);
-      return { response: finalResponse, iterations, usedTools };
-    }
 
-    // Execute tool calls
-    for (const toolCall of response.toolCalls) {
-      usedTools.push(toolCall.name);
-      const result = await executeToolCall(toolCall, userId);
-      messages.push({
-        role: 'assistant',
-        content: null,
-        tool_calls: [toAPIToolCall(toolCall)],
-      });
-      messages.push(result);
+      // If no tool calls, we have a final response
+      if (!response.toolCalls || response.toolCalls.length === 0) {
+        let finalResponse = response.content;
+        
+        // Si no hay contenido, responder genéricamente
+        if (!finalResponse) {
+          finalResponse = '¿En qué puedo ayudarte?';
+        }
+        
+        console.log(`✅ Respuesta final generada (${finalResponse.length} chars)`);
+        memory.saveMessage(userId, 'assistant', finalResponse);
+        return { response: finalResponse, iterations, usedTools };
+      }
+
+      // Execute tool calls
+      for (const toolCall of response.toolCalls) {
+        usedTools.push(toolCall.name);
+        console.log(`🛠️ Ejecutando: ${toolCall.name}...`);
+        const result = await executeToolCall(toolCall, userId);
+        console.log(`📥 Resultado ${toolCall.name} (${typeof result.content === 'string' ? result.content.length : 0} chars)`);
+        
+        // 🛡️ INTERCEPCIÓN DE SEGURIDAD SAAS
+        // Si la herramienta devuelve un link de inicio de sesión o indica falta de conexión,
+        // cortocircuitamos el flujo para asegurar que el usuario vea el enlace intacto.
+        const content = typeof result.content === 'string' ? result.content : '';
+        if (content.includes('🔗') || content.includes('authorization') || content.includes('No estás conectado')) {
+          console.log(`🔗 Interceptado enlace de autorización. Deteniendo agente.`);
+          memory.saveMessage(userId, 'assistant', content);
+          return { response: content, iterations, usedTools };
+        }
+
+        messages.push({
+          role: 'assistant',
+          content: null,
+          tool_calls: [toAPIToolCall(toolCall)],
+        });
+        messages.push(result);
+      }
     }
-  }
 
   // Max iterations reached
   const fallbackResponse = 'Alcanzé el límite de iteraciones. Por favor, intenta de nuevo con una pregunta más simple.';

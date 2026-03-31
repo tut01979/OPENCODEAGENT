@@ -20,11 +20,9 @@ export function createBot(): Bot {
       return;
     }
 
-    if (!config.telegram.allowedUserIds.includes(userId)) {
-      console.warn(`Usuario no autorizado intentó acceder: ${userId}`);
-      await ctx.reply('⛔ No tienes permiso para usar este bot.');
-      return;
-    }
+    // 🔓 MODO SAAS ACTIVADO: Se elimina el bloqueo de usuarios.
+    // Ahora cualquier persona puede interactuar con el bot y enlazar su cuenta de Google.
+    // if (!config.telegram.allowedUserIds.includes(userId)) { ... }
 
     await next();
   });

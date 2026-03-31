@@ -21,16 +21,24 @@ class FirebaseService {
       const saPath = config.firebase.credentials;
       let initConfig: admin.AppOptions = {};
 
-      if (saPath && fs.existsSync(saPath)) {
+      if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        console.log(`🔑 Usando credenciales de: proces.env.FIREBASE_SERVICE_ACCOUNT_JSON`);
+        // Soporte completo para inyectar JSON evitando problemas de .gitignore al subir a Railway
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+        initConfig = {
+          credential: admin.credential.cert(serviceAccount),
+          projectId: serviceAccount.project_id || config.firebase.projectId,
+        };
+      } else if (saPath && fs.existsSync(saPath)) {
         console.log(`🔑 Usando credenciales de: ${saPath}`);
         const serviceAccountStr = fs.readFileSync(path.resolve(saPath), 'utf8');
         const serviceAccount = JSON.parse(serviceAccountStr);
-        // Siempre confiar en el JSON de Firebase si existe, ignorando env confusas.
         initConfig = {
           credential: admin.credential.cert(serviceAccount),
           projectId: serviceAccount.project_id || config.firebase.projectId,
         };
       } else {
+        console.log('⚠️ No se encontró JSON físico ni en variables. Intentando applicationDefault()...');
         initConfig = {
           credential: admin.credential.applicationDefault(),
           projectId: config.firebase.projectId,

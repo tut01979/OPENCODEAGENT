@@ -1,13 +1,8 @@
 import { google } from 'googleapis';
-import fs from 'fs/promises';
-import path from 'path';
 import type { Tool } from './types.js';
-
-const TOKEN_PATH = './data/token.json';
-const CREDENTIALS_PATH = './data/gmail-credentials.json';
-
+import { config } from '../config.js';
 import { firebase } from '../services/firebase.js';
-import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase, getMasterToken } from '../services/auth.js';
 
 async function getCalendarClient(userId: string) {
   try {
@@ -20,15 +15,14 @@ async function getCalendarClient(userId: string) {
       return google.calendar({ version: 'v3', auth: oAuth2Client });
     }
 
-    try {
-      const TOKEN_PATH = './data/token.json';
-      const fsSync = await import('fs');
-      if (fsSync.existsSync(TOKEN_PATH)) {
-        const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
-        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+    // 🛡️ MASTER TOKEN FALLBACK (Solo Administrador)
+    if (userId === config.telegram.adminId) {
+      const masterToken = getMasterToken();
+      if (masterToken) {
+        oAuth2Client.setCredentials(masterToken);
         return google.calendar({ version: 'v3', auth: oAuth2Client });
       }
-    } catch {}
+    }
 
     return null;
   } catch {
@@ -38,8 +32,13 @@ async function getCalendarClient(userId: string) {
 
 const AUTH_ERROR_MSG = (userId: string) => {
   const url = generateAuthUrl(userId);
-  return `⚠️ No estás conectado con Google. Para gestionar tu calendario, autoriza el acceso aquí:\n\n🔗 ${url}\n\nUna vez hecho, vuelve a pedirme la tarea.`;
+  return `🔑 **Tu sesión de Google ha expirado.**\n\nNecesito que autorices de nuevo. Solo es una vez:\n\n🔗 ${url}\n\nAl hacer clic, serás redirigido a Google. Tras autorizar, vuelve a Telegram y repite tu solicitud.`;
 };
+
+function isUnauthorizedError(err: unknown): boolean {
+  const msg = String(err);
+  return msg.includes('unauthorized_client') || msg.includes('invalid_grant') || msg.includes('Token has been expired') || msg.includes('Invalid Credentials');
+}
 
 export const createEventTool: Tool = {
   name: 'create_event',
@@ -101,6 +100,7 @@ export const createEventTool: Tool = {
       
       return `✅ Evento creado:\nTítulo: ${summary}\nInicio: ${startDatetime}\nFin: ${endDatetime}\nLink: ${response.data.htmlLink}`;
     } catch (error) {
+      if (isUnauthorizedError(error)) return AUTH_ERROR_MSG(userId);
       return `Error creando evento: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
@@ -159,6 +159,7 @@ export const listEventsTool: Tool = {
       
       return `Próximos ${events.length} eventos:\n\n${eventList.join('\n\n')}`;
     } catch (error) {
+      if (isUnauthorizedError(error)) return AUTH_ERROR_MSG(userId);
       return `Error listando eventos: ${error instanceof Error ? error.message : String(error)}`;
     }
   },

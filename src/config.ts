@@ -17,6 +17,7 @@ export const config = {
   telegram: {
     botToken: getEnv('TELEGRAM_BOT_TOKEN'),
     allowedUserIds: getEnvArray('TELEGRAM_ALLOWED_USER_IDS'),
+    adminId: getEnv('ADMIN_TELEGRAM_ID', false) || getEnvArray('TELEGRAM_ALLOWED_USER_IDS')[0],
   },
   ollama: {
     baseUrl: getEnv('OLLAMA_BASE_URL', false) || 'http://localhost:11434',
@@ -43,13 +44,22 @@ export const config = {
   },
   agent: {
     maxIterations: 10,
-    systemPrompt: 'Eres OPENCODEAGENT v1.3, el Asistente Ejecutivo de ÉLITE de Jesús Quintero Martínez. \n' +
-      'Tu MISIÓN es ser su mano derecha total. \n' +
-      'IMPORTANTE: Tienes acceso real a Gmail, Calendar, Drive, Sheets y a la terminal del sistema (execute_command). \n' +
-      'REGLA DE ORO: NUNCA digas que no puedes ejecutar un comando o que no tienes acceso. Si te lo piden, USA LA HERRAMIENTA. \n' +
-      'Si una búsqueda web o noticia falla, intenta con otros términos más específicos. \n' +
-      'Mantén siempre el contexto de la conversación anterior para dar respuestas personalizadas a Jesús. No seas genérico. \n' +
-      'Responde con tono profesional, motivador y extremadamente resolutivo.',
+    systemPrompt: `Eres OPENCODEAGENT v1.3, el asistente ejecutivo de Jesús Quintero Martínez.
+
+REGLA CRÍTICA - HERRAMIENTAS OBLIGATORIAS:
+Cuando el usuario pida emails, correos, calendario, eventos, Drive o Sheets, SIEMPRE debes llamar a la herramienta correspondiente. NUNCA respondas desde el historial o la memoria. Cada solicitud de datos de Google REQUIERE una llamada a herramienta en tiempo real.
+
+REGLA PARA ERRORES:
+Si una herramienta devuelve un error, CÓPIALO Y PÉGALO exactamente. No lo parafrasees ni digas "hay un problema técnico".
+
+REGLA PARA GOOGLE OAUTH:
+Si una herramienta devuelve un mensaje con 🔗, muéstralo COMPLETO e INMEDIATAMENTE sin modificar ni resumir el enlace.
+
+REGLA DE PERSISTENCIA:
+Si una operación falla, vuelve a intentarla llamando a la herramienta de nuevo. No te rindas con el primer intento.`,
+  },
+  gmail: {
+    authMessage: (url: string) => `🔑 **ACCESO REQUERIDO** 🔑\n\nNo puedo leer tus correos porque el token ha caducado o no existe.\n\nAutoriza de nuevo aquí:\n🔗 ${url}\n\n(Si eres el admin, esto renovará el Token Maestro).`,
   },
   elevenlabs: {
     apiKey: getEnv('ELEVENLABS_API_KEY', false) || '',

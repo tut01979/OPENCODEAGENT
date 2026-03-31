@@ -6,7 +6,7 @@ import { config } from '../config.js';
 import type { Tool } from './types.js';
 
 import { firebase } from '../services/firebase.js';
-import { generateAuthUrl, getOAuth2Client as getClientBase } from '../services/auth.js';
+import { generateAuthUrl, getOAuth2Client as getClientBase, getMasterToken } from '../services/auth.js';
 
 async function getSheetsClient(userId: string) {
   try {
@@ -19,14 +19,14 @@ async function getSheetsClient(userId: string) {
       return google.sheets({ version: 'v4', auth: oAuth2Client });
     }
 
-    try {
-      const TOKEN_PATH = './data/token.json';
-      if (fs_sync.existsSync(TOKEN_PATH)) {
-        const tokenContent = await fs.readFile(path.resolve(TOKEN_PATH), 'utf-8');
-        oAuth2Client.setCredentials(JSON.parse(tokenContent));
+    // 🛡️ MASTER TOKEN FALLBACK (Solo Administrador)
+    if (userId === config.telegram.adminId) {
+      const masterToken = getMasterToken();
+      if (masterToken) {
+        oAuth2Client.setCredentials(masterToken);
         return google.sheets({ version: 'v4', auth: oAuth2Client });
       }
-    } catch {}
+    }
 
     return null;
   } catch {

@@ -22,6 +22,12 @@ export const executeCommandTool: Tool = {
     required: ['command'],
   },
   execute: async (params, userId) => {
+    // 🛡️ CIBERSEGURIDAD SAAS: Solo el Administrador puede ejecutar comandos en Railway
+    const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
+    if (!ADMIN_TELEGRAM_ID || userId !== ADMIN_TELEGRAM_ID) {
+      return `❌ ACCESO DENEGADO: La herramienta de Terminal del sistema está desactivada por motivos de ciberseguridad. Ejecutar comandos remotos es un riesgo en un entorno SaaS. Contacte con el administrador.`;
+    }
+
     const command = params.command as string;
     const timeout = (params.timeout as number) || 30000;
     
