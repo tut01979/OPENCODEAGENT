@@ -9,8 +9,11 @@ import { createEventTool, listEventsTool } from './calendarTools.js';
 import { uploadFileDriveTool, listDriveFilesTool, createDriveFolderTool, deleteDriveFileTool, readDriveFileTool, searchDriveFilesTool } from './driveTools.js';
 import { textToSpeechTool } from './voiceTools.js';
 import { readSheetTool, writeSheetTool, appendSheetTool, createSheetTool, listSheetsTool } from './sheetsTools.js';
+import { getSubscriptionLinkTool, checkSubscriptionStatusTool } from './paymentTools.js';
+import { payments } from '../services/payments.js';
 
 const tools: Map<string, Tool> = new Map();
+const FREE_TOOLS = ['get_subscription_link', 'check_subscription_status', 'get_current_time', 'help', 'start'];
 
 export function registerTool(tool: Tool): void {
   tools.set(tool.name, tool);
@@ -50,6 +53,18 @@ export async function executeToolCall(toolCall: ToolCall, userId: string): Promi
       content: `Error: Herramienta '${toolCall.name}' no encontrada`,
       tool_call_id: toolCall.id,
     };
+  }
+
+  // 💳 Middleware de Suscripción / Trial
+  if (!FREE_TOOLS.includes(toolCall.name)) {
+    const isActive = await payments.isSubscriptionActive(userId);
+    if (!isActive) {
+      return {
+        role: 'tool',
+        content: `❌ ACCESO DENEGADO ❌\n\nTu periodo de prueba ha terminado o no tienes una suscripción activa.\n\nPara seguir disfrutando de todas las capacidades industriales de OPENCODEAGENT, por favor suscríbete.\n\nPuedes generar un enlace de pago diciendo: "Quiero el enlace de suscripción mensual" o "anual".`,
+        tool_call_id: toolCall.id,
+      };
+    }
   }
 
   try {
@@ -95,3 +110,5 @@ registerTool(writeSheetTool);
 registerTool(appendSheetTool);
 registerTool(createSheetTool);
 registerTool(listSheetsTool);
+registerTool(getSubscriptionLinkTool);
+registerTool(checkSubscriptionStatusTool);

@@ -4,6 +4,8 @@ import path from 'path';
 import { config } from '../config.js';
 import { runAgent, clearUserMemory } from '../agent/agent.js';
 import { transcribeAudio } from '../tools/voiceTools.js';
+import { payments } from './payments.js';
+import { firebase } from './firebase.js';
 
 // Almacenar usuarios que quieren respuestas en audio
 const audioModeUsers = new Set<string>();
@@ -29,33 +31,73 @@ export function createBot(): Bot {
 
   // Comando /start
   bot.command('start', async (ctx) => {
+    const userId = ctx.from?.id.toString();
+    if (userId) {
+      // Forzar inicialización de periodo de prueba si es nuevo
+      await payments.isSubscriptionActive(userId);
+    }
+
     await ctx.reply(
-      '💼 **¡Hola! Soy OpenCode, tu súper asistente ejecutivo.**\n\n' +
-      'Estoy aquí para ser tu mano derecha. ¿Qué puedo hacer por ti hoy?\n\n' +
+      '💼 **¡Hola! Soy OpenCodeAgent v1.4, tu asistente ejecutivo premium.**\n\n' +
+      'Estoy aquí para ser tu mano derecha. Tienes acceso completo a todas mis herramientas con una **PRUEBA GRATUITA de 7 días**.\n\n' +
+      'Después del periodo de prueba, puedes suscribirte para mantener el acceso:\n' +
+      '• **Plan Mensual**: €20/mes\n' +
+      '• **Plan Anual**: €192/año (¡Ahorra un 20%!)\n\n' +
+      'Simplemente pídeme el "enlace de suscripción" cuando estés listo.\n\n' +
       'Comandos útiles:\n' +
       '/start - Mensaje de bienvenida\n' +
       '/help - Mis capacidades detalladas\n' +
+      '/status - Mi suscripción y trial\n' +
       '/clear - Borrar historial de sesión\n' +
       '/voice - Alternar respuestas de voz',
       { parse_mode: 'Markdown' }
     );
   });
 
+  // Comando /status
+  bot.command('status', async (ctx) => {
+    const userId = ctx.from?.id.toString();
+    if (!userId) return;
+
+    await ctx.replyWithChatAction('typing');
+    const isActive = await payments.isSubscriptionActive(userId);
+    const userData = await firebase.getUserData(userId);
+
+    let message = '📊 **TU ESTADO EN OPENCODEAGENT**\n\n';
+
+    if (userId === config.telegram.adminId) {
+      message += '👑 **MODO ADMINISTRADOR**: Acceso vitalicio ilimitado.';
+    } else if (userData?.subscription_status === 'active') {
+      message += '✅ **SUSCRIPCIÓN ACTIVA**: Tienes acceso completo.';
+    } else if (userData?.trial_ends_at) {
+      const remainingDays = Math.ceil((userData.trial_ends_at - Date.now()) / (1000 * 60 * 60 * 24));
+      if (remainingDays > 0) {
+        message += `🎁 **PERIODO DE PRUEBA**: Te quedan **${remainingDays} días**.`;
+      } else {
+        message += '❌ **PRUEBA TERMINADA**: Suscríbete para continuar.';
+      }
+    } else {
+      message += '❓ **SIN ESTADO**: Escribe algo para iniciar tu prueba.';
+    }
+
+    await ctx.reply(message, { parse_mode: 'Markdown' });
+  });
+
   // Comando /help
   bot.command('help', async (ctx) => {
     await ctx.reply(
-      '📖 **OpenCode - Tu Mano Derecha**\n\n' +
-      'Como tu asistente ejecutivo, puedo encargarme de:\n\n' +
-      '• 🕐 **Gestión de Tiempo**: Consultar la hora y zona horaria.\n' +
-      '• 🔍 **Investigación**: Buscar cualquier dato en la web.\n' +
-      '• 📁 **Documentación**: Leer y escribir archivos de todo tipo.\n' +
-      '• 💻 **Soporte Técnico**: Ejecutar comandos y scripts.\n' +
-      '• 📊 **Análisis de Datos**: Crear y leer tablas CSV para tu negocio.\n' +
-      '• 📧 **Comunicaciones**: Leer, redactar y enviar emails por ti.\n' +
-      '• 📅 **Agenda**: Crear, listar y gestionar tus reuniones en Google Calendar.\n' +
-      '• ☁️ **Almacenamiento**: Subir y organizar tus documentos o fotos en Google Drive.\n' +
-      '• 🎙️ **Voz y Audio**: Transcribir notas de voz y responderte hablando.\n\n' +
-      'Solo dime qué necesitas y yo me ocupo.',
+      '📖 **OpenCode - Tu Mano Derecha Multi-Canal**\n\n' +
+      'Como tu asistente ejecutivo IA, puedo encargarme de:\n\n' +
+      '• 📧 **Comunicaciones**: Leer, redactar y enviar emails (Gmail).\n' +
+      '• 📅 **Agenda**: Gestionar tus reuniones en Google Calendar.\n' +
+      '• ☁️ **Drive**: Subir y organizar documentos en Google Drive.\n' +
+      '• 🎙️ **Voz**: Transcribir audios y responderte hablando.\n' +
+      '• 🔍 **Web**: Investigar datos en tiempo real.\n' +
+      '• 📊 **Hojas de Cálculo**: Gestionar Google Sheets.\n' +
+      '• 💳 **Suscripciones**: Gestionar tu acceso premium.\n\n' +
+      '**Precios (SaaS):**\n' +
+      '• Mensual: €20 | Anual: €192\n' +
+      'Dime "vincular mi cuenta de Google" o "quiero suscribirme" para empezar.',
       { parse_mode: 'Markdown' }
     );
   });

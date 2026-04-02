@@ -145,6 +145,30 @@ class FirebaseService {
     }
   }
 
+  async getUserData(userId: string): Promise<any | null> {
+    if (!this.db) return null;
+    try {
+      const doc = await this.db.collection('users').doc(userId).get();
+      if (!doc.exists) return null;
+      return doc.data();
+    } catch (error) {
+      console.error(`Error obteniendo datos de usuario ${userId}:`, error);
+      return null;
+    }
+  }
+
+  async updateUserData(userId: string, data: any): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.collection('users').doc(userId).set({
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (error) {
+      console.error(`Error actualizando datos de usuario ${userId}:`, error);
+    }
+  }
+
   isConnected(): boolean {
     return this.initialized && this.db !== null;
   }

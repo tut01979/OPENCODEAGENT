@@ -2,7 +2,12 @@ import Stripe from 'stripe';
 import { firebase } from './firebase.js';
 import { config } from '../config.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripeKey = config.payments.stripeSecretKey;
+if (!stripeKey || stripeKey.includes('REEMPLAZAR')) {
+  console.warn('⚠️ Stripe API Key no configurada o es un placeholder. Los pagos fallarán.');
+}
+
+const stripe = new Stripe(stripeKey || 'sk_test_placeholder', {
   apiVersion: '2025-01-27' as any,
 });
 
@@ -24,13 +29,22 @@ export const payments = {
   },
 
   async isSubscriptionActive(userId: string): Promise<boolean> {
-    const userData = await firebase.getUserData(userId);
-    if (!userData) return false;
-
     // Si es Admin, siempre activo
-    if (userId === process.env.ADMIN_TELEGRAM_ID) return true;
+    if (userId === process.env.ADMIN_TELEGRAM_ID || userId === config.telegram.adminId) return true;
 
-    // Verificar si está en periodo de prueba (7 días desde registro)
+    let userData = await firebase.getUserData(userId);
+    
+    // Si no existe, creamos su periodo de prueba inicial (7 días)
+    if (!userData) {
+      userData = {
+        trial_ends_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        subscription_status: 'none',
+      };
+      await firebase.updateUserData(userId, userData);
+      console.log(`🎁 Iniciado periodo de prueba de 7 días para el nuevo usuario: ${userId}`);
+    }
+
+    // Verificar si está en periodo de prueba
     const now = Date.now();
     const trialEnd = userData.trial_ends_at || 0;
     if (now < trialEnd) return true;

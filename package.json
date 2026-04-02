@@ -23,7 +23,8 @@
     "node-cron": "^4.2.1",
     "node-gtts": "^2.0.2",
     "open": "^11.0.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "stripe": "^21.0.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
