@@ -3,6 +3,7 @@ import { firebase } from './firebase.js';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { config } from '../config.js';
 
 // Configuración de credenciales de Google
 let CREDENTIALS_PATH = './credentials/gmail-credentials.json';
@@ -194,7 +195,7 @@ export function startAuthServer(port: number = 3000) {
           <section class="hero">
               <h1>Tu Ejecutivo IA Híbrido</h1>
               <p>Controla Gmail, Calendar y Drive con la potencia de la Inteligencia Artificial directamente desde Telegram. Multi-usuario, seguro y ultrarrápido.</p>
-              <a href="https://t.me/${process.env.TELEGRAM_BOT_USERNAME || 'OPENCODE_AGENT_BOT'}" class="cta">Empezar Prueba Gratis 7 Días</a>
+              <a href="https://t.me/${config.telegram.botUsername}" class="cta">Empezar Prueba Gratis 7 Días</a>
           </section>
           <div class="features">
               <div class="card">

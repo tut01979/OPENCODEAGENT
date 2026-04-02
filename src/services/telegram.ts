@@ -41,8 +41,8 @@ export function createBot(): Bot {
       '💼 **¡Hola! Soy OpenCodeAgent v1.4, tu asistente ejecutivo premium.**\n\n' +
       'Estoy aquí para ser tu mano derecha. Tienes acceso completo a todas mis herramientas con una **PRUEBA GRATUITA de 7 días**.\n\n' +
       'Después del periodo de prueba, puedes suscribirte para mantener el acceso:\n' +
-      '• **Plan Mensual**: €20/mes\n' +
-      '• **Plan Anual**: €192/año (¡Ahorra un 20%!)\n\n' +
+      '• **Plan Mensual**: €10/mes\n' +
+      '• **Plan Anual**: €100/año (¡Ahorra un 20%!)\n\n' +
       'Simplemente pídeme el "enlace de suscripción" cuando estés listo.\n\n' +
       'Comandos útiles:\n' +
       '/start - Mensaje de bienvenida\n' +

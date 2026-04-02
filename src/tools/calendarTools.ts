@@ -164,3 +164,16 @@ export const listEventsTool: Tool = {
     }
   },
 };
+
+export const getCalendarLinkTool: Tool = {
+  name: 'get_calendar_link',
+  description: 'Devuelve el enlace directo al Google Calendar del usuario.',
+  parameters: {
+    type: 'object',
+    properties: {},
+  },
+  execute: async () => {
+    return '📅 **Tu Calendario de Google** 📅\n\nAccede directamente aquí:\n🔗 https://calendar.google.com/\n\n(Asegúrate de estar logueado con la cuenta que autorizaste al bot)'.trim();
+  },
+};
+

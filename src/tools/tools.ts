@@ -5,7 +5,7 @@ import { readFileTool, writeFileTool } from './fileTools.js';
 import { executeCommandTool } from './shellTools.js';
 import { createCSVTool, readCSVTool } from './csvTools.js';
 import { readEmailTool, sendEmailTool, getEmailDetailsTool, downloadAttachmentTool, markEmailAsReadTool } from './gmailTools.js';
-import { createEventTool, listEventsTool } from './calendarTools.js';
+import { createEventTool, listEventsTool, getCalendarLinkTool } from './calendarTools.js';
 import { uploadFileDriveTool, listDriveFilesTool, createDriveFolderTool, deleteDriveFileTool, readDriveFileTool, searchDriveFilesTool } from './driveTools.js';
 import { textToSpeechTool } from './voiceTools.js';
 import { readSheetTool, writeSheetTool, appendSheetTool, createSheetTool, listSheetsTool } from './sheetsTools.js';
@@ -13,7 +13,7 @@ import { getSubscriptionLinkTool, checkSubscriptionStatusTool } from './paymentT
 import { payments } from '../services/payments.js';
 
 const tools: Map<string, Tool> = new Map();
-const FREE_TOOLS = ['get_subscription_link', 'check_subscription_status', 'get_current_time', 'help', 'start'];
+const FREE_TOOLS = ['get_subscription_link', 'check_subscription_status', 'get_current_time', 'get_calendar_link', 'help', 'start'];
 
 export function registerTool(tool: Tool): void {
   tools.set(tool.name, tool);
@@ -98,6 +98,7 @@ registerTool(downloadAttachmentTool);
 registerTool(markEmailAsReadTool);
 registerTool(createEventTool);
 registerTool(listEventsTool);
+registerTool(getCalendarLinkTool);
 registerTool(uploadFileDriveTool);
 registerTool(listDriveFilesTool);
 registerTool(createDriveFolderTool);

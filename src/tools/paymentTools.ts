@@ -10,7 +10,7 @@ export const getSubscriptionLinkTool: Tool = {
       plan: {
         type: 'string',
         enum: ['monthly', 'yearly'],
-        description: 'The subscription plan to offer (monthly for €20/month or yearly for €192/year).',
+        description: 'The subscription plan to offer (monthly for €10/month or yearly for €100/year).',
       },
     },
     required: ['plan'],

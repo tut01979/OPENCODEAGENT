@@ -21,6 +21,42 @@ export const textToSpeechTool: Tool = {
     const truncatedText = text.length > 2000 ? text.slice(0, 2000) + '...' : text;
     const outputPath = path.resolve(`./temp_voice_${Date.now()}.mp3`);
     
+    // 1. Intentar ElevenLabs (Premium)
+    if (config.elevenlabs.apiKey) {
+      try {
+        const voiceId = config.voice.elevenlabsVoiceIds[0] || 'ErXwSotAl4jc8BmDqcPv'; // Default: Male British
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': config.elevenlabs.apiKey,
+          },
+          body: JSON.stringify({
+            text: truncatedText,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const buffer = Buffer.from(await response.arrayBuffer());
+          fs.writeFileSync(outputPath, buffer);
+          return `AUDIO_READY:${outputPath}`;
+        } else {
+          const errorBody = await response.text();
+          console.error(`ElevenLabs failed (HTTP ${response.status}):`, errorBody);
+          // Fallback to gTTS below
+        }
+      } catch (err) {
+        console.error('ElevenLabs Error:', err);
+        // Fallback to gTTS below
+      }
+    }
+
+    // 2. Fallback a gTTS (Gratis/Robótica)
     try {
       const gtts = (await import('node-gtts')).default;
       return new Promise<string>((resolve, reject) => {
