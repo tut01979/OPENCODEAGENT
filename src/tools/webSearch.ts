@@ -4,6 +4,8 @@ interface SearchResult {
   title: string;
   url: string;
   snippet: string;
+  source?: string;
+  date?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -64,7 +66,97 @@ async function searchDuckDuckGo(query: string, maxResults: number): Promise<Sear
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Motor 2: DuckDuckGo News API (noticias en tiempo real)
+// Motor 2: Búsqueda Local (negocios, empresas, clínicas, etc.)
+// ═══════════════════════════════════════════════════════════════
+async function searchLocal(query: string, maxResults: number): Promise<SearchResult[]> {
+  // Añadir términos de búsqueda local si no los tiene
+  let searchQuery = query;
+  if (!query.toLowerCase().includes('cerca') && !query.toLowerCase().includes('en ') && !query.toLowerCase().includes('near')) {
+    searchQuery = `${query} España`;
+  }
+
+  const encodedQuery = encodeURIComponent(searchQuery + ' dirección teléfono');
+  const url = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+    },
+  });
+
+  const html = await response.text();
+  const results: SearchResult[] = [];
+
+  const resultBlocks = html.split('class="result__body');
+
+  for (let i = 1; i < resultBlocks.length && results.length < maxResults * 2; i++) {
+    const block = resultBlocks[i];
+
+    let realUrl = '';
+    const urlMatch = block.match(/class="result__url"[^>]*href="([^"]+)"/);
+    if (urlMatch) {
+      try {
+        const ddgUrl = new URL(urlMatch[1]);
+        realUrl = ddgUrl.searchParams.get('uddg') || urlMatch[1];
+      } catch {
+        realUrl = urlMatch[1];
+      }
+    }
+
+    let title = '';
+    const titleMatch = block.match(/class="result__a"[^>]*>([^<]+(?:<[^>]+>[^<]*)*)<\/a>/);
+    if (titleMatch) {
+      title = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+
+    let snippet = '';
+    const snippetMatch = block.match(/class="result__snippet"[^>]*>([^<]+(?:<[^>]+>[^<]*)*)/);
+    if (snippetMatch) {
+      snippet = snippetMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+
+    // Filtrar resultados que parecen negocios locales
+    const isLocalResult =
+      snippet.includes('Tel') ||
+      snippet.includes('teléfono') ||
+      snippet.includes('dirección') ||
+      snippet.includes('Calle') ||
+      snippet.includes('Av.') ||
+      snippet.includes('Plaza') ||
+      snippet.includes('Google Maps') ||
+      snippet.includes('Yelp') ||
+      snippet.includes('Páginas Amarillas') ||
+      snippet.includes('Horario') ||
+      title.includes('Clínica') ||
+      title.includes('Centro') ||
+      title.includes('Empresa') ||
+      realUrl.includes('maps.google') ||
+      realUrl.includes('yelp') ||
+      realUrl.includes('paginasamarillas');
+
+    if (title && realUrl) {
+      results.push({
+        title,
+        url: realUrl,
+        snippet: snippet || 'Sin descripción',
+        source: isLocalResult ? '📍 Local' : '🌐 Web'
+      });
+    }
+  }
+
+  // Priorizar resultados locales
+  results.sort((a, b) => {
+    if (a.source?.includes('Local') && !b.source?.includes('Local')) return -1;
+    if (!a.source?.includes('Local') && b.source?.includes('Local')) return 1;
+    return 0;
+  });
+
+  return results.slice(0, maxResults);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Motor 3: DuckDuckGo News API (noticias en tiempo real)
 // ═══════════════════════════════════════════════════════════════
 async function searchNews(query: string, maxResults: number): Promise<SearchResult[]> {
   const encodedQuery = encodeURIComponent(query);
@@ -109,7 +201,7 @@ async function searchNews(query: string, maxResults: number): Promise<SearchResu
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Motor 3: Google News RSS (noticias reales y actuales)
+// Motor 4: Google News RSS (noticias reales y actuales)
 // ═══════════════════════════════════════════════════════════════
 async function searchGoogleNews(query: string, maxResults: number): Promise<SearchResult[]> {
   const encodedQuery = encodeURIComponent(query);
@@ -146,6 +238,8 @@ async function searchGoogleNews(query: string, maxResults: number): Promise<Sear
         title,
         url: link,
         snippet: source ? `${source} - ${dateStr}` : dateStr || 'Sin descripción',
+        source,
+        date: dateStr,
       });
     }
   }
@@ -158,13 +252,16 @@ async function searchGoogleNews(query: string, maxResults: number): Promise<Sear
 // ═══════════════════════════════════════════════════════════════
 export const webSearchTool: Tool = {
   name: 'web_search',
-  description: 'Busca información en la web. Incluye título, enlace directo y descripción de cada resultado. Para noticias recientes usa search_type="news".',
+  description: `Busca información en la web con resultados completos. Tipos disponibles:
+- "web": Búsqueda general con títulos claros, enlaces directos y resúmenes útiles.
+- "news": Noticias recientes con fecha, fuente y enlace.
+- "local": Negocios, empresas, clínicas, restaurantes. Incluye dirección, teléfono y web cuando está disponible.`,
   parameters: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'La consulta de búsqueda. Para noticias agrega "noticias" o usa search_type="news".',
+        description: 'La consulta de búsqueda. Para negocios locales usa: "clínicas dentales en Valencia", "restaurantes cerca de mí", etc.',
       },
       max_results: {
         type: 'number',
@@ -172,8 +269,8 @@ export const webSearchTool: Tool = {
       },
       search_type: {
         type: 'string',
-        description: 'Tipo de búsqueda: "web" (general) o "news" (noticias recientes con fecha y fuente). Default: "web"',
-        enum: ['web', 'news'],
+        description: 'Tipo de búsqueda: "web" (general), "news" (noticias recientes) o "local" (negocios/empresas). Default: "web"',
+        enum: ['web', 'news', 'local'],
       },
     },
     required: ['query'],
@@ -195,6 +292,10 @@ export const webSearchTool: Tool = {
           console.log('📰 Google News vacío, intentando DuckDuckGo News...');
           results = await searchNews(query, maxResults);
         }
+      } else if (searchType === 'local') {
+        // Para negocios locales
+        console.log(`📍 Buscando locales: "${query}"`);
+        results = await searchLocal(query, maxResults);
       } else {
         // Para búsqueda general: DuckDuckGo
         console.log(`🔍 Buscando en web: "${query}"`);
@@ -205,12 +306,25 @@ export const webSearchTool: Tool = {
         return `No se encontraron resultados para: "${query}"`;
       }
 
-      // Formatear resultados con enlaces reales
-      const formatted = results.map((r, i) => {
-        return `**${i + 1}. ${r.title}**\n🔗 ${r.url}\n${r.snippet}`;
-      }).join('\n\n');
+      // Formatear resultados con estructura clara
+      let formatted: string;
 
-      return `Resultados (${searchType === 'news' ? '📰 Noticias' : '🔍 Web'}) para "${query}":\n\n${formatted}`;
+      if (searchType === 'news') {
+        formatted = results.map((r, i) => {
+          return `📰 **${i + 1}. ${r.title}**\n📅 ${r.date || 'Fecha desconocida'}\n📰 ${r.source || 'Fuente desconocida'}\n🔗 ${r.url}\n📝 ${r.snippet}`;
+        }).join('\n\n');
+      } else if (searchType === 'local') {
+        formatted = results.map((r, i) => {
+          return `📍 **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
+        }).join('\n\n');
+      } else {
+        formatted = results.map((r, i) => {
+          return `🔍 **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
+        }).join('\n\n');
+      }
+
+      const typeEmoji = searchType === 'news' ? '📰 Noticias' : searchType === 'local' ? '📍 Locales' : '🔍 Web';
+      return `**${typeEmoji} para "${query}":**\n\n${formatted}\n\n---\n_Total: ${results.length} resultados_`;
 
     } catch (error) {
       return `Error buscando en web: ${error instanceof Error ? error.message : String(error)}`;
