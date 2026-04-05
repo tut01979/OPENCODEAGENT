@@ -69,30 +69,32 @@ async function searchDuckDuckGo(query: string, maxResults: number): Promise<Sear
 // Motor 2: Búsqueda Local (negocios, empresas, clínicas, etc.)
 // ═══════════════════════════════════════════════════════════════
 async function searchLocal(query: string, maxResults: number): Promise<SearchResult[]> {
-  // Añadir términos de búsqueda local si no los tiene
-  let searchQuery = query;
-  if (!query.toLowerCase().includes('cerca') && !query.toLowerCase().includes('en ') && !query.toLowerCase().includes('near')) {
-    searchQuery = `${query} España`;
-  }
+  // Extraer ciudad de la query para verificar relevancia
+  const cityMatch = query.match(/en\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+)|cerca\s+de\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+)|([A-Za-záéíóúñÁÉÍÓÚÑ]+)\s*$/i);
+  const targetCity = cityMatch ? (cityMatch[1] || cityMatch[2] || cityMatch[3]).trim().toLowerCase() : null;
 
-  const encodedQuery = encodeURIComponent(searchQuery + ' dirección teléfono');
-  const url = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+  // Términos de búsqueda más específicos para negocios
+  const searchQuery = `${query} dirección teléfono contacto`;
+  const encodedQuery = encodeURIComponent(searchQuery);
+  const url = `https://html.duckduckgo.com/html/?q=${encodedQuery}&kl=es-es`;
 
   const response = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml',
     },
   });
 
   const html = await response.text();
-  const results: SearchResult[] = [];
+  const rawResults: SearchResult[] = [];
 
   const resultBlocks = html.split('class="result__body');
 
-  for (let i = 1; i < resultBlocks.length && results.length < maxResults * 2; i++) {
+  for (let i = 1; i < resultBlocks.length && rawResults.length < maxResults * 3; i++) {
     const block = resultBlocks[i];
 
+    // Extraer URL real
     let realUrl = '';
     const urlMatch = block.match(/class="result__url"[^>]*href="([^"]+)"/);
     if (urlMatch) {
@@ -104,55 +106,167 @@ async function searchLocal(query: string, maxResults: number): Promise<SearchRes
       }
     }
 
+    // Extraer título
     let title = '';
     const titleMatch = block.match(/class="result__a"[^>]*>([^<]+(?:<[^>]+>[^<]*)*)<\/a>/);
     if (titleMatch) {
       title = titleMatch[1].replace(/<[^>]+>/g, '').trim();
     }
 
+    // Extraer snippet
     let snippet = '';
     const snippetMatch = block.match(/class="result__snippet"[^>]*>([^<]+(?:<[^>]+>[^<]*)*)/);
     if (snippetMatch) {
       snippet = snippetMatch[1].replace(/<[^>]+>/g, '').trim();
     }
 
-    // Filtrar resultados que parecen negocios locales
-    const isLocalResult =
-      snippet.includes('Tel') ||
-      snippet.includes('teléfono') ||
-      snippet.includes('dirección') ||
-      snippet.includes('Calle') ||
-      snippet.includes('Av.') ||
-      snippet.includes('Plaza') ||
-      snippet.includes('Google Maps') ||
-      snippet.includes('Yelp') ||
-      snippet.includes('Páginas Amarillas') ||
-      snippet.includes('Horario') ||
-      title.includes('Clínica') ||
-      title.includes('Centro') ||
-      title.includes('Empresa') ||
-      realUrl.includes('maps.google') ||
-      realUrl.includes('yelp') ||
-      realUrl.includes('paginasamarillas');
-
     if (title && realUrl) {
-      results.push({
-        title,
-        url: realUrl,
-        snippet: snippet || 'Sin descripción',
-        source: isLocalResult ? '📍 Local' : '🌐 Web'
+      rawResults.push({ title, url: realUrl, snippet: snippet || '' });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FILTROS ESTRICTOS DE CALIDAD
+  // ═══════════════════════════════════════════════════════════════
+  const verifiedResults: SearchResult[] = [];
+
+  // Dominios confiables para negocios locales
+  const trustedDomains = [
+    'google.com/maps',
+    'maps.google',
+    'g.page',
+    'facebook.com',
+    'instagram.com',
+    'linkedin.com',
+    'yelp.com',
+    'tripadvisor.com',
+    'foursquare.com',
+    'paginasamarillas.es',
+    'qdq.com',
+    '11870.com',
+    'infobel.com',
+    'hotels.com',
+    'booking.com',
+    'idealista.com',
+    'fotocasa.es',
+  ];
+
+  // Indicadores de datos de contacto reales
+  const contactIndicators = [
+    /\b\d{3}[\s-]?\d{3}[\s-]?\d{3}\b/,  // Teléfonos españoles
+    /\b\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b/,
+    /\b\d{4}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}\b/,
+    /\+34[\s-]?\d/,
+    /tel[eé]fono/i,
+    /m[oó]vil/i,
+    /contacto/i,
+    /direcci[oó]n/i,
+    /calle/i,
+    /avenida/i,
+    /plaza/i,
+    /paseo/i,
+    /\b\d{5}\b/,  // Códigos postales españoles
+    /www\./i,
+    /\.es\b/i,
+    /\.com\b/i,
+  ];
+
+  for (const result of rawResults) {
+    const urlLower = result.url.toLowerCase();
+    const snippetLower = result.snippet.toLowerCase();
+    const titleLower = result.title.toLowerCase();
+
+    // Verificar que es un dominio confiable O tiene datos de contacto
+    const isTrustedDomain = trustedDomains.some(domain => urlLower.includes(domain));
+    const hasContactData = contactIndicators.some(pattern => pattern.test(snippetLower));
+    const hasRealBusinessName = titleLower.length > 3 && !titleLower.includes('pdf') && !titleLower.includes('doc');
+
+    // Verificar que la ciudad coincide si se especificó
+    const cityInResult = targetCity && (
+      snippetLower.includes(targetCity) ||
+      titleLower.includes(targetCity) ||
+      urlLower.includes(targetCity.replace(/\s+/g, '-'))
+    );
+
+    // Solo aceptar si cumple criterios estrictos
+    if (isTrustedDomain || (hasContactData && hasRealBusinessName)) {
+      // Si se especificó ciudad, verificar que esté presente
+      if (targetCity && !cityInResult && !isTrustedDomain) {
+        continue; // Saltar resultados de otras ciudades
+      }
+
+      // Limpiar y formatear el snippet
+      const cleanSnippet = result.snippet
+        .replace(/\.\.\./g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 200);
+
+      verifiedResults.push({
+        title: result.title,
+        url: result.url,
+        snippet: cleanSnippet || 'Ver enlace para más detalles',
+        source: isTrustedDomain ? '✅ Verificado' : '📍 Local',
       });
     }
   }
 
-  // Priorizar resultados locales
-  results.sort((a, b) => {
-    if (a.source?.includes('Local') && !b.source?.includes('Local')) return -1;
-    if (!a.source?.includes('Local') && b.source?.includes('Local')) return 1;
-    return 0;
-  });
+  // Si no hay suficientes resultados verificados, intentar con Google Maps
+  if (verifiedResults.length < maxResults) {
+    const mapsResults = await searchGoogleMaps(query, maxResults - verifiedResults.length);
+    verifiedResults.push(...mapsResults);
+  }
 
-  return results.slice(0, maxResults);
+  return verifiedResults.slice(0, maxResults);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Motor alternativo: Google Maps (para resultados verificados)
+// ═══════════════════════════════════════════════════════════════
+async function searchGoogleMaps(query: string, maxResults: number): Promise<SearchResult[]> {
+  const encodedQuery = encodeURIComponent(query);
+  const url = `https://www.google.com/search?q=${encodedQuery}&hl=es&gl=ES`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'es-ES,es;q=0.9',
+      },
+    });
+
+    const html = await response.text();
+    const results: SearchResult[] = [];
+
+    // Buscar bloques de Google Maps en resultados
+    const mapBlocks = html.match(/<div[^>]*data-lat[^>]*>[\s\S]*?<\/div>/g) || [];
+    const businessBlocks = html.match(/<div[^>]*class="[^"]*rlflab[^"]*"[^>]*>[\s\S]*?<\/div>/g) || [];
+
+    // Extraer datos de negocio si existen
+    for (let i = 0; i < Math.min(businessBlocks.length, maxResults); i++) {
+      const block = businessBlocks[i];
+
+      const titleMatch = block.match(/<span[^>]*role="heading"[^>]*>([^<]+)</span>/) ||
+                         block.match(/<div[^>]*class="[^"]*dbg0pd[^"]*"[^>]*>([^<]+)</div>/);
+
+      if (titleMatch) {
+        const title = titleMatch[1].trim();
+        // Crear enlace a Google Maps para ese negocio
+        const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(title)}`;
+
+        results.push({
+          title,
+          url: mapsUrl,
+          snippet: 'Ver en Google Maps para dirección y teléfono',
+          source: '📍 Maps',
+        });
+      }
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -303,6 +417,17 @@ export const webSearchTool: Tool = {
       }
 
       if (results.length === 0) {
+        if (searchType === 'local') {
+          return `📍 **No encontré resultados verificados para: "${query}"**
+
+⚠️ Esto puede deberse a que:
+- No hay negocios registrados con datos de contacto públicos
+- La ubicación no es específica
+
+💡 **Recomendación:** Busca directamente en:
+- Google Maps: https://www.google.com/maps/search/${encodeURIComponent(query)}
+- Páginas Amarillas: https://www.paginasamarillas.es/buscar/${encodeURIComponent(query)}`;
+        }
         return `No se encontraron resultados para: "${query}"`;
       }
 
@@ -315,7 +440,8 @@ export const webSearchTool: Tool = {
         }).join('\n\n');
       } else if (searchType === 'local') {
         formatted = results.map((r, i) => {
-          return `📍 **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
+          const verified = r.source?.includes('Verificado') ? '✅' : '📍';
+          return `${verified} **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
         }).join('\n\n');
       } else {
         formatted = results.map((r, i) => {
@@ -324,7 +450,11 @@ export const webSearchTool: Tool = {
       }
 
       const typeEmoji = searchType === 'news' ? '📰 Noticias' : searchType === 'local' ? '📍 Locales' : '🔍 Web';
-      return `**${typeEmoji} para "${query}":**\n\n${formatted}\n\n---\n_Total: ${results.length} resultados_`;
+      const disclaimer = searchType === 'local'
+        ? '\n\n---\n_⚠️ Verifica los datos en el enlace oficial. No invento información._'
+        : '\n\n---\n_Total: ' + results.length + ' resultados_';
+
+      return `**${typeEmoji} para "${query}":**\n\n${formatted}${disclaimer}`;
 
     } catch (error) {
       return `Error buscando en web: ${error instanceof Error ? error.message : String(error)}`;
