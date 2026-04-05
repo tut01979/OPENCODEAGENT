@@ -246,8 +246,8 @@ async function searchGoogleMaps(query: string, maxResults: number): Promise<Sear
     for (let i = 0; i < Math.min(businessBlocks.length, maxResults); i++) {
       const block = businessBlocks[i];
 
-      const titleMatch = block.match(/<span[^>]*role="heading"[^>]*>([^<]+)</span>/) ||
-                         block.match(/<div[^>]*class="[^"]*dbg0pd[^"]*"[^>]*>([^<]+)</div>/);
+      const titleMatch = block.match(/<span[^>]*role="heading"[^>]*>([^<]+)<\/span>/) ||
+                         block.match(/<div[^>]*class="[^"]*dbg0pd[^"]*"[^>]*>([^<]+)<\/div>/);
 
       if (titleMatch) {
         const title = titleMatch[1].trim();
