@@ -121,7 +121,7 @@ function formatDuration(isoDuration: string): string {
 
 export const searchYoutubeTool: Tool = {
   name: 'search_youtube',
-  description: 'Busca videos en YouTube por término de búsqueda. No requiere autenticación.',
+  description: 'Busca videos en YouTube por término de búsqueda. Requiere autenticación OAuth.',
   parameters: {
     type: 'object',
     properties: {
@@ -135,30 +135,21 @@ export const searchYoutubeTool: Tool = {
     const maxResults = (params.max_results as number) || 5;
 
     try {
-      const apiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
-      console.log(`🎬 YouTube search: query="${query}", apiKey=${apiKey ? apiKey.substring(0, 10) + '...' : 'NO CONFIGURADA'}`);
-
-      if (!apiKey) {
-        console.log(`❌ YouTube: YOUTUBE_API_KEY y GOOGLE_API_KEY no están configuradas`);
-        return YOUTUBE_REAUTH_MSG(userId, 'La API de YouTube no está configurada. Necesitas autorizar tu cuenta de Google primero.');
+      const client = await getYouTubeClient(userId);
+      if (!client) {
+        return YOUTUBE_REAUTH_MSG(userId, 'No estás conectado a YouTube. Autoriza tu cuenta para buscar videos.');
       }
 
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${maxResults}&type=video&key=${apiKey}`;
-      console.log(`📡 YouTube: Llamando a API...`);
-      const res = await fetch(url);
-      console.log(`📡 YouTube: Respuesta status=${res.status}`);
+      console.log(`🎬 YouTube search: query="${query}" usando OAuth2`);
 
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => '');
-        console.log(`❌ YouTube Error: status=${res.status}, body=${errBody.substring(0, 500)}`);
-        if (res.status === 403 || errBody.includes('PERMISSION_DENIED')) {
-          return YOUTUBE_REAUTH_MSG(userId, 'La API de YouTube denegó el acceso. Es posible que necesites reautorizar tu cuenta.');
-        }
-        return `Error buscando en YouTube: ${res.statusText}`;
-      }
+      const response = await client.youtube.search.list({
+        part: ['snippet'],
+        q: query,
+        type: ['video'],
+        maxResults: maxResults,
+      });
 
-      const data = await res.json() as any;
-      const items = data.items || [];
+      const items = response.data.items || [];
 
       if (items.length === 0) {
         return `No se encontraron videos para: "${query}"`;
@@ -177,6 +168,13 @@ export const searchYoutubeTool: Tool = {
 
       return output;
     } catch (err) {
+      console.error('Error en searchYoutubeTool:', err);
+      if (isInsufficientScopesError(err)) {
+        return YOUTUBE_REAUTH_MSG(userId, 'Tu autorización actual no tiene permisos para buscar en YouTube. Necesitas volver a autorizar.');
+      }
+      if (isUnauthorizedError(err)) {
+        return YOUTUBE_REAUTH_MSG(userId, 'Tu sesión de YouTube ha expirado o es inválida.');
+      }
       return `Error al buscar en YouTube: ${err instanceof Error ? err.message : String(err)}`;
     }
   },
