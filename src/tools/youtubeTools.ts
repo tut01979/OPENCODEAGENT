@@ -121,7 +121,7 @@ function formatDuration(isoDuration: string): string {
 
 export const searchYoutubeTool: Tool = {
   name: 'search_youtube',
-  description: 'Busca videos en YouTube por término de búsqueda. Requiere autenticación OAuth.',
+  description: 'Busca videos en YouTube por término de búsqueda. Requiere autenticación OAuth. Devuelve SOLO enlaces reales de YouTube. NO inventes enlaces.',
   parameters: {
     type: 'object',
     properties: {
@@ -152,19 +152,39 @@ export const searchYoutubeTool: Tool = {
       const items = response.data.items || [];
 
       if (items.length === 0) {
-        return `No se encontraron videos para: "${query}"`;
+        return `⚠️ No se encontraron videos reales para: "${query}"\n\nNo voy a inventar resultados. Intenta con otros términos de búsqueda.`;
       }
 
-      let output = `🎬 **Resultados de YouTube para "${query}":**\n\n`;
-      for (const item of items) {
+      // IMPORTANTE: Solo usar datos REALES de la API
+      const validItems = items.filter(item => {
+        const videoId = item.id?.videoId;
+        const title = item.snippet?.title;
+        // Verificar que el videoId parece válido (11 caracteres alfanuméricos)
+        return videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId) && title;
+      });
+
+      if (validItems.length === 0) {
+        return `⚠️ Los resultados de YouTube no contienen videos válidos.\n\nNo voy a inventar enlaces. Intenta con otros términos de búsqueda.`;
+      }
+
+      let output = `🎬 **Resultados VERIFICADOS de YouTube para "${query}":**\n\n`;
+      output += `⚠️ IMPORTANTE: Estos son los ÚNICOS enlaces reales. NO inventes otros.\n\n`;
+
+      for (const item of validItems) {
         const title = item.snippet?.title || 'Sin título';
         const channel = item.snippet?.channelTitle || 'Canal desconocido';
         const videoId = item.id?.videoId;
 
+        // URL verificada de YouTube
+        const verifiedUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
         output += `📹 **${title}**\n`;
         output += `   Canal: ${channel}\n`;
-        output += `   🔗 https://www.youtube.com/watch?v=${videoId}\n\n`;
+        output += `   🔗 ENLACE VERIFICADO: ${verifiedUrl}\n\n`;
       }
+
+      output += `---\n_Total: ${validItems.length} videos verificados_\n`;
+      output += `_NO generes más enlaces de los mostrados arriba._`;
 
       return output;
     } catch (err) {

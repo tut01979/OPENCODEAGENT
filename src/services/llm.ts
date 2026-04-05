@@ -136,6 +136,7 @@ async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
+      temperature: 0.3,  // Baja temperatura para máxima precisión y reducir alucinaciones
     }),
   });
 
