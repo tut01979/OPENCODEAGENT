@@ -41,7 +41,7 @@ async function callOllama(messages: Message[], tools?: unknown[]): Promise<LLMRe
       messages: ollamaMessages,
       stream: false,
       options: {
-        temperature: 0.7,
+        temperature: 0.25,
       },
     }),
   });
@@ -101,7 +101,7 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0,
+      temperature: 0.25,
     }),
   });
 
@@ -136,7 +136,7 @@ async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0.3,  // Baja temperatura para máxima precisión y reducir alucinaciones
+      temperature: 0.25,  // Baja temperatura para máxima precisión y reducir alucinaciones
     }),
   });
 
@@ -169,6 +169,12 @@ function cleanResponse(text: string | null): string | null {
   cleaned = cleaned.replace(/<\|assistant\|>[\s\S]*?<\|\/assistant\|>/gi, '');
   cleaned = cleaned.replace(/\[INST\][\s\S]*?\[\/INST\]/gi, '');
   cleaned = cleaned.replace(/<<SYS>>[\s\S]*?<\/SYS>>/gi, '');
+  
+  // 🛡️ Limpieza avanzada de caracteres extraños y repeticiones (Anti-Gravity Fix)
+  cleaned = cleaned.replace(/#{3,}/g, '###'); // Normalizar títulos excesivos
+  cleaned = cleaned.replace(/(\*\*\s*){2,}/g, '**'); // Quitar negritas repetitivas vacías
+  cleaned = cleaned.replace(/(\n\s*){3,}/g, '\n\n'); // Max 2 saltos de línea
+  cleaned = cleaned.replace(/[\u2500-\u257F\u2580-\u259F]/g, ''); // Dibujo de cajas residual
   
   // Limpiar líneas vacías extras
   cleaned = cleaned.replace(/^\s*\n/gm, '').trim();

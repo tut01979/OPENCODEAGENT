@@ -3,6 +3,7 @@ import { chat } from '../services/llm.js';
 import { memory } from '../services/memory.js';
 import { getToolsForAPI, executeToolCall } from '../tools/tools.js';
 import type { Message, ToolCall, APIToolCall } from '../tools/types.js';
+import { sanitizeOutput } from '../utils/sanitize.js';
 
 export interface AgentResult {
   response: string;
@@ -28,7 +29,7 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
   // Build conversation context
   const conversationHistory = await memory.getConversation(userId);
   const messages: Message[] = [
-    { role: 'system', content: config.agent.systemPrompt },
+    { role: 'system', content: config.agent.getSystemPrompt() },
     ...conversationHistory.map(entry => {
       let content: any = entry.content;
       if (typeof content === 'string' && content.startsWith('[') && content.endsWith(']')) {
@@ -75,6 +76,9 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
         if (!finalResponse) {
           finalResponse = '¿En qué puedo ayudarte?';
         }
+
+        // ✨ SANITIZACIÓN FINAL (Limpiar thinking blocks, chars de control, etc.)
+        finalResponse = sanitizeOutput(finalResponse);
         
         console.log(`✅ Respuesta final generada (${finalResponse.length} chars)`);
         memory.saveMessage(userId, 'assistant', finalResponse);

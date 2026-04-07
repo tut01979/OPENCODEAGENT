@@ -1,10 +1,11 @@
+// -*- coding: utf-8 -*-
 import { createBot } from './services/telegram.js';
 import { memory } from './services/memory.js';
 import { setupCron } from './services/cron.js';
 import { startAuthServer } from './services/auth.js';
 
 async function main() {
-  console.log('🚀 Iniciando OPENCODEAGENT v1.3 (Voice: Enrique/Lucia)...');
+  console.log('🚀 Iniciando OPENCODEAGENT v1.4.1 (Stable) [Executive Focus]...');
   
   try {
     const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

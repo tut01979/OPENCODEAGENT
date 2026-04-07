@@ -1,4 +1,5 @@
 import type { Tool } from './types.js';
+import { SEP } from '../utils/sanitize.js';
 
 interface SearchResult {
   title: string;
@@ -176,6 +177,12 @@ async function searchLocal(query: string, maxResults: number): Promise<SearchRes
     const snippetLower = result.snippet.toLowerCase();
     const titleLower = result.title.toLowerCase();
 
+    // EXCLUIR Directorios genéricos que no dan info directa del negocio (evita alucinación)
+    const isGenericDirectory = (urlLower.includes('paginasamarillas.es') && !urlLower.includes('/ficha/')) ||
+                               (urlLower.includes('qdq.com') && !urlLower.includes('/perfil/')) ||
+                               urlLower.includes('yelp.es/search') ||
+                               urlLower.includes('tripadvisor.es/Search');
+
     // Verificar que es un dominio confiable O tiene datos de contacto
     const isTrustedDomain = trustedDomains.some(domain => urlLower.includes(domain));
     const hasContactData = contactIndicators.some(pattern => pattern.test(snippetLower));
@@ -189,11 +196,15 @@ async function searchLocal(query: string, maxResults: number): Promise<SearchRes
     );
 
     // Solo aceptar si cumple criterios estrictos
-    if (isTrustedDomain || (hasContactData && hasRealBusinessName)) {
+    if ((isTrustedDomain || (hasContactData && hasRealBusinessName)) && !isGenericDirectory) {
       // Si se especificó ciudad, verificar que esté presente
       if (targetCity && !cityInResult && !isTrustedDomain) {
         continue; // Saltar resultados de otras ciudades
       }
+
+      // Extraer datos explícitos si están en el snippet
+      const phoneMatch = result.snippet.match(/\b\d{9}\b|\+34\s?\d{9}/);
+      const phone = phoneMatch ? `📞 **Teléfono:** ${phoneMatch[0]}` : '';
 
       // Limpiar y formatear el snippet
       const cleanSnippet = result.snippet
@@ -205,7 +216,7 @@ async function searchLocal(query: string, maxResults: number): Promise<SearchRes
       verifiedResults.push({
         title: result.title,
         url: result.url,
-        snippet: cleanSnippet || 'Ver enlace para más detalles',
+        snippet: `${cleanSnippet}${phone ? `\n${phone}` : ''}`,
         source: isTrustedDomain ? '✅ Verificado' : '📍 Local',
       });
     }
@@ -362,12 +373,71 @@ async function searchGoogleNews(query: string, maxResults: number): Promise<Sear
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Motor 5: Brave Search API (Calidad Superior y Gratis/Pago)
+// ═══════════════════════════════════════════════════════════════
+async function searchBrave(query: string, maxResults: number): Promise<SearchResult[]> {
+  const apiKey = (config as any).brave?.apiKey;
+  if (!apiKey) return [];
+
+  try {
+    console.log(`🦁 Brave Search: Consultando "${query}"...`);
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodedQuery}&count=${maxResults}&country=es&safesearch=off&spellcheck=1`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Subscription-Token': apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ Brave Search falló: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data: any = await response.json();
+    const results: SearchResult[] = [];
+
+    if (data.web?.results) {
+      for (const r of data.web.results) {
+        results.push({
+          title: r.title,
+          url: r.url,
+          snippet: r.description || 'Sin descripción',
+          source: '🦁 Brave',
+        });
+      }
+    }
+
+    // Si es búsqueda local, intentar extraer info de local_results si existe
+    if (data.locations?.results) {
+      for (const loc of data.locations.results) {
+        results.unshift({
+          title: loc.title,
+          url: `https://www.google.com/maps/search/${encodeURIComponent(loc.title)}`,
+          snippet: `${loc.address || ''} ${loc.phone ? `📞 ${loc.phone}` : ''}`.trim(),
+          source: '📍 Brave Local',
+        });
+      }
+    }
+
+    return results;
+  } catch (err) {
+    console.error('❌ Error en Brave Search:', err);
+    return [];
+  }
+}
+
+import { config } from '../config.js';
+
+// ═══════════════════════════════════════════════════════════════
 // Herramienta principal
 // ═══════════════════════════════════════════════════════════════
 export const webSearchTool: Tool = {
   name: 'web_search',
   description: `Busca información en la web con resultados completos. Tipos disponibles:
-- "web": Búsqueda general con títulos claros, enlaces directos y resúmenes útiles.
+- "web": Búsqueda general con títulos claros, enlaces directos y resúmenes útiles (Usa Brave + DuckDuckGo).
 - "news": Noticias recientes con fecha, fuente y enlace.
 - "local": Negocios, empresas, clínicas, restaurantes. Incluye dirección, teléfono y web cuando está disponible.`,
   parameters: {
@@ -407,26 +477,37 @@ export const webSearchTool: Tool = {
           results = await searchNews(query, maxResults);
         }
       } else if (searchType === 'local') {
-        // Para negocios locales
+        // Para negocios locales: Brave Search (si está disponible) -> searchLocal (Scraper)
         console.log(`📍 Buscando locales: "${query}"`);
-        results = await searchLocal(query, maxResults);
+        results = await searchBrave(query, maxResults);
+        
+        if (results.length < maxResults) {
+          const localResults = await searchLocal(query, maxResults - results.length);
+          results.push(...localResults);
+        }
       } else {
-        // Para búsqueda general: DuckDuckGo
+        // Para búsqueda general: Brave Search -> DuckDuckGo
         console.log(`🔍 Buscando en web: "${query}"`);
-        results = await searchDuckDuckGo(query, maxResults);
+        results = await searchBrave(query, maxResults);
+
+        if (results.length < maxResults) {
+          const ddgResults = await searchDuckDuckGo(query, maxResults - results.length);
+          results.push(...ddgResults);
+        }
       }
+
+      const manualLinks = `
+🚀 **Aumenta tus posibilidades de búsqueda:**
+📍 Google Maps: https://www.google.com/maps/search/${encodeURIComponent(query)}
+📒 Páginas Amarillas: https://www.paginasamarillas.es/resultados.html?what=${encodeURIComponent(query)}`;
 
       if (results.length === 0) {
         if (searchType === 'local') {
           return `📍 **No encontré resultados verificados para: "${query}"**
 
-⚠️ Esto puede deberse a que:
-- No hay negocios registrados con datos de contacto públicos
-- La ubicación no es específica
+⚠️ Esto puede deberse a que la información no es pública o la ubicación es poco específica.
 
-💡 **Recomendación:** Busca directamente en:
-- Google Maps: https://www.google.com/maps/search/${encodeURIComponent(query)}
-- Páginas Amarillas: https://www.paginasamarillas.es/buscar/${encodeURIComponent(query)}`;
+💡 **Prueba con estos enlaces directos:**${manualLinks}`;
         }
         return `No se encontraron resultados para: "${query}"`;
       }
@@ -443,6 +524,9 @@ export const webSearchTool: Tool = {
           const verified = r.source?.includes('Verificado') ? '✅' : '📍';
           return `${verified} **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
         }).join('\n\n');
+
+        // ✅ Añadir enlaces de soporte al final para aumentar posibilidades (SOLICITADO POR USUARIO)
+        formatted += `\n\n${SEP}${manualLinks}`;
       } else {
         formatted = results.map((r, i) => {
           return `🔍 **${i + 1}. ${r.title}**\n🔗 ${r.url}\n📝 ${r.snippet}`;
@@ -450,14 +534,17 @@ export const webSearchTool: Tool = {
       }
 
       const typeEmoji = searchType === 'news' ? '📰 Noticias' : searchType === 'local' ? '📍 Locales' : '🔍 Web';
-      const disclaimer = searchType === 'local'
-        ? '\n\n---\n_⚠️ Verifica los datos en el enlace oficial. No invento información._'
-        : '\n\n---\n_Total: ' + results.length + ' resultados_';
+      const disclaimer = `\n\n---\n_⚠️ Datos extraídos en tiempo real. Si un dato no aparece, es que no ha sido encontrado por el buscador. NUNCA lo supongas._\n_Total: ${results.length} resultados_`;
 
       return `**${typeEmoji} para "${query}":**\n\n${formatted}${disclaimer}`;
 
     } catch (error) {
-      return `Error buscando en web: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return `❌ **Error en la búsqueda web:** ${errorMsg}
+
+💡 **No te preocupes, puedes buscar manualmente aquí:**
+📍 Google Maps: https://www.google.com/maps/search/${encodeURIComponent(query)}
+📒 Páginas Amarillas: https://www.paginasamarillas.es/resultados.html?what=${encodeURIComponent(query)}`;
     }
   },
 };

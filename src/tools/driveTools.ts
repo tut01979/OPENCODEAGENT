@@ -10,20 +10,19 @@ const PDFParse = require('pdf-parse');
 
 import { firebase } from '../services/firebase.js';
 import { generateAuthUrl, getOAuth2Client as getClientBase, getMasterToken } from '../services/auth.js';
+import { sanitizeOutput, SEP } from '../utils/sanitize.js';
 
-async function getDriveClient(userId: string) {
+export async function getDriveClient(userId: string) {
   try {
     const oAuth2Client = getClientBase();
     if (!oAuth2Client) return null;
 
-    // 1. PRIORIDAD: OAuth2 (Acceso personal del usuario desde Firebase)
     const userToken = await firebase.getUserToken(userId);
     if (userToken) {
       oAuth2Client.setCredentials(userToken);
       return google.drive({ version: 'v3', auth: oAuth2Client });
     }
 
-    // 🛡️ MASTER TOKEN FALLBACK (Solo Administrador)
     if (userId === config.telegram.adminId) {
       const masterToken = getMasterToken();
       if (masterToken) {
@@ -39,12 +38,16 @@ async function getDriveClient(userId: string) {
 
 const AUTH_ERROR_MSG = (userId: string) => {
   const url = generateAuthUrl(userId);
-  return `⚠️ No estás conectado con Google. Para acceder a tus archivos de Drive, autoriza aquí:\n\n🔗 ${url}\n\nDespués de autorizar, repíteme tu solicitud.`;
+  return `No estas conectado con Google. Autoriza aqui:
+
+${url}
+
+Despues de autorizar, repiteme tu solicitud.`;
 };
 
 export const readDriveFileTool: Tool = {
   name: 'read_drive_file',
-  description: 'Lee el contenido de un archivo en Google Drive (soporta Google Docs, PDF y Texto)',
+  description: 'Lee el contenido de un archivo en Google Drive (Google Docs, PDF, Texto)',
   parameters: {
     type: 'object',
     properties: {
@@ -58,34 +61,54 @@ export const readDriveFileTool: Tool = {
     if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
-      const metadata = await drive.files.get({ fileId, fields: 'name, mimeType' });
-      const { name, mimeType } = metadata.data;
+      const metadata = await drive.files.get({ fileId, fields: 'name, mimeType, webViewLink' });
+      const { name, mimeType, webViewLink } = metadata.data;
+      const link = webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
 
-      // 1. Si es un Google Doc, lo exportamos como texto plano
+      // Google Doc -> exportar como texto
       if (mimeType === 'application/vnd.google-apps.document') {
-        const response = await drive.files.export({
-          fileId,
-          mimeType: 'text/plain',
-        });
-        return `📄 Contenido de Google Doc (${name}):\n\n${response.data}`;
+        const response = await drive.files.export({ fileId, mimeType: 'text/plain' });
+        return `${SEP}
+📄 **Google Doc: ${name}**
+🔗 **Enlace directo:** ${link}
+${SEP}
+
+Contenido:
+${sanitizeOutput(String(response.data))}`;
       }
 
-      // 2. Si es PDF, lo descargamos y extraemos texto
+      // PDF -> extraer texto
       if (mimeType === 'application/pdf') {
         const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data as any);
         const data = await PDFParse(buffer);
-        return `📄 Contenido de PDF (${name}):\n\n${data.text}`;
+        return `${SEP}
+📄 **PDF: ${name}**
+🔗 **Enlace directo:** ${link}
+${SEP}
+
+Contenido:
+${sanitizeOutput(data.text)}`;
       }
 
-      // 3. Si es texto plano o similar
+      // Texto plano o JSON
       if (mimeType?.includes('text/') || mimeType === 'application/json') {
         const response = await drive.files.get({ fileId, alt: 'media' });
         const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
-        return `📄 Contenido de archivo (${name}):\n\n${content}`;
+        return `${SEP}
+📄 **Archivo: ${name}**
+🔗 **Enlace directo:** ${link}
+${SEP}
+
+Contenido:
+${sanitizeOutput(content)}`;
       }
 
-      return `⚠️ El archivo ${name} tiene un tipo (${mimeType}) que no se puede leer directamente como texto.`;
+      return `${SEP}
+📄 **${name}**
+📂 Tipo: ${mimeType}
+🔗 **Enlace directo:** ${link}
+${SEP}`;
     } catch (error) {
       return `Error leyendo archivo de Drive: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -114,9 +137,20 @@ export const searchDriveFilesTool: Tool = {
       });
 
       const files = response.data.files || [];
-      if (files.length === 0) return `No se encontraron archivos que coincidan con "${qTerm}"`;
+      if (files.length === 0) return `No se encontraron archivos para: "${qTerm}"`;
 
-      return `Resultados de búsqueda:\n\n` + files.map(f => `- ${f.name || 'Sin nombre'} (${f.mimeType || 'Sin tipo'})\n  ID: ${f.id || 'Sin ID'}\n  Link: ${f.webViewLink || 'Sin link'}`).join('\n\n');
+      let output = `🔍 **${files.length} archivos encontrados para "${qTerm}":**\n\n`;
+      for (const f of files) {
+        const link = f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
+        output += `${SEP}
+📄 **${f.name}**
+**Tipo:** ${f.mimeType || 'Desconocido'}
+**ID:** ${f.id}
+🔗 **Enlace directo:** ${link}
+${SEP}\n\n`;
+      }
+
+      return sanitizeOutput(output);
     } catch (error) {
       return `Error buscando en Drive: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -129,18 +163,9 @@ export const uploadFileDriveTool: Tool = {
   parameters: {
     type: 'object',
     properties: {
-      file_path: {
-        type: 'string',
-        description: 'Ruta local del archivo a subir',
-      },
-      folder_id: {
-        type: 'string',
-        description: 'ID de carpeta en Drive (opcional, por defecto raíz)',
-      },
-      name: {
-        type: 'string',
-        description: 'Nombre del archivo en Drive (opcional)',
-      },
+      file_path: { type: 'string', description: 'Ruta local del archivo' },
+      folder_id: { type: 'string', description: 'ID de carpeta en Drive (opcional)' },
+      name: { type: 'string', description: 'Nombre del archivo en Drive (opcional)' },
     },
     required: ['file_path'],
   },
@@ -155,16 +180,11 @@ export const uploadFileDriveTool: Tool = {
     try {
       const absolutePath = path.resolve(filePath);
       if (!fs.existsSync(absolutePath)) {
-        return `Error: Archivo no encontrado: ${absolutePath}`;
+        return `Archivo no encontrado: ${absolutePath}`;
       }
 
-      const fileMetadata: any = {
-        name: fileName,
-      };
-
-      if (folderId) {
-        fileMetadata.parents = [folderId];
-      }
+      const fileMetadata: any = { name: fileName };
+      if (folderId) fileMetadata.parents = [folderId];
 
       const ext = path.extname(absolutePath).toLowerCase();
       let mimeType = 'application/octet-stream';
@@ -174,18 +194,20 @@ export const uploadFileDriveTool: Tool = {
       else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
       else if (ext === '.png') mimeType = 'image/png';
 
-      const media = {
-        mimeType,
-        body: fs.createReadStream(absolutePath),
-      };
-
       const response = await drive.files.create({
         requestBody: fileMetadata,
-        media: media,
+        media: { mimeType, body: fs.createReadStream(absolutePath) },
         fields: 'id, name, webViewLink',
       });
 
-      return `✅ Archivo subido a Google Drive:\nNombre: ${response.data.name || 'Sin nombre'}\nID: ${response.data.id || 'Sin ID'}\nLink: ${response.data.webViewLink || 'Sin link'}`;
+      const link = response.data.webViewLink || `https://drive.google.com/file/d/${response.data.id}/view`;
+
+      return `✅ **Archivo subido a Google Drive**
+${SEP}
+📄 **Nombre:** ${response.data.name}
+🆔 **ID:** ${response.data.id}
+🔗 **Enlace directo:** ${link}
+${SEP}`;
     } catch (error) {
       return `Error subiendo archivo: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -198,14 +220,8 @@ export const listDriveFilesTool: Tool = {
   parameters: {
     type: 'object',
     properties: {
-      max_results: {
-        type: 'number',
-        description: 'Número máximo de archivos (default: 10)',
-      },
-      folder_id: {
-        type: 'string',
-        description: 'ID de carpeta (opcional)',
-      },
+      max_results: { type: 'number', description: 'Maximo archivos (default 10)' },
+      folder_id: { type: 'string', description: 'ID de carpeta (opcional)' },
     },
     required: [],
   },
@@ -218,9 +234,7 @@ export const listDriveFilesTool: Tool = {
 
     try {
       let q = "trashed = false";
-      if (folderId) {
-        q += ` and '${folderId}' in parents`;
-      }
+      if (folderId) q += ` and '${folderId}' in parents`;
 
       const response = await drive.files.list({
         q,
@@ -230,12 +244,22 @@ export const listDriveFilesTool: Tool = {
       });
 
       const files = response.data.files || [];
-      if (files.length === 0) {
-        return 'No se encontraron archivos en Drive';
+      if (files.length === 0) return 'No se encontraron archivos en Drive';
+
+      let output = `📁 **${files.length} archivos en Google Drive:**\n\n`;
+      for (const f of files) {
+        const link = f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
+        const size = f.size ? `${(Number(f.size) / 1024).toFixed(1)} KB` : 'N/A';
+        output += `${SEP}
+📄 **${f.name}**
+**Tipo:** ${f.mimeType?.split('/').pop() || 'Desconocido'}
+**Tamaño:** ${size}
+**ID:** ${f.id}
+🔗 **Enlace directo:** ${link}
+${SEP}\n\n`;
       }
 
-      const fileList = files.map(f => `- ${f.name || 'Sin nombre'} (${f.mimeType || 'Sin tipo'})\n  ID: ${f.id || 'Sin ID'}\n  Link: ${f.webViewLink || 'Sin link'}`);
-      return `Archivos en Google Drive:\n\n${fileList.join('\n\n')}`;
+      return sanitizeOutput(output);
     } catch (error) {
       return `Error listando archivos: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -248,14 +272,8 @@ export const createDriveFolderTool: Tool = {
   parameters: {
     type: 'object',
     properties: {
-      name: {
-        type: 'string',
-        description: 'Nombre de la carpeta',
-      },
-      parent_id: {
-        type: 'string',
-        description: 'ID de la carpeta padre (opcional)',
-      },
+      name: { type: 'string', description: 'Nombre de la carpeta' },
+      parent_id: { type: 'string', description: 'ID de carpeta padre (opcional)' },
     },
     required: ['name'],
   },
@@ -266,7 +284,7 @@ export const createDriveFolderTool: Tool = {
     if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
-      const fileMetadata = {
+      const fileMetadata: any = {
         name,
         mimeType: 'application/vnd.google-apps.folder',
         parents: parentId ? [parentId] : undefined,
@@ -277,23 +295,63 @@ export const createDriveFolderTool: Tool = {
         fields: 'id, name, webViewLink',
       });
 
-      return `✅ Carpeta creada:\nNombre: ${response.data.name}\nID: ${response.data.id}\nLink: ${response.data.webViewLink}`;
+      const link = response.data.webViewLink || `https://drive.google.com/drive/folders/${response.data.id}`;
+
+      return `✅ **Carpeta creada en Google Drive**
+${SEP}
+📁 **Nombre:** ${response.data.name}
+🆔 **ID:** ${response.data.id}
+🔗 **Enlace directo:** ${link}
+${SEP}`;
     } catch (error) {
       return `Error creando carpeta: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
 };
 
-export const deleteDriveFileTool: Tool = {
-  name: 'delete_drive_file',
-  description: 'Mueve un archivo o carpeta a la papelera en Google Drive',
+export const searchDriveFolderTool: Tool = {
+  name: 'search_drive_folder',
+  description: 'Busca una carpeta en Google Drive por nombre exacto o parcial',
   parameters: {
     type: 'object',
     properties: {
-      file_id: {
-        type: 'string',
-        description: 'ID de archivo o carpeta a eliminar',
-      },
+      name: { type: 'string', description: 'Nombre de la carpeta' },
+    },
+    required: ['name'],
+  },
+  execute: async (params, userId) => {
+    const name = params.name as string;
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
+
+    try {
+      const response = await drive.files.list({
+        q: `name contains '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name, webViewLink)',
+      });
+
+      const folders = response.data.files || [];
+      if (folders.length === 0) return `No se encontró ninguna carpeta con el nombre: "${name}"`;
+
+      let output = `📁 **Carpetas encontradas:**\n\n`;
+      for (const f of folders) {
+        const link = f.webViewLink || `https://drive.google.com/drive/folders/${f.id}`;
+        output += `${SEP}\n📁 **${f.name}**\n🆔 ID: \`${f.id}\`\n🔗 **Enlace:** ${link}\n${SEP}\n\n`;
+      }
+      return sanitizeOutput(output);
+    } catch (error) {
+      return `Error buscando carpeta: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+};
+
+export const deleteDriveFileTool: Tool = {
+  name: 'delete_drive_file',
+  description: 'Mueve un archivo o carpeta a la papelera',
+  parameters: {
+    type: 'object',
+    properties: {
+      file_id: { type: 'string', description: 'ID del archivo o carpeta' },
     },
     required: ['file_id'],
   },
@@ -303,13 +361,96 @@ export const deleteDriveFileTool: Tool = {
     if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
-      await drive.files.update({
-        fileId,
-        requestBody: { trashed: true },
-      });
-      return `✅ Archivo/Carpeta con ID ${fileId} movido a la papelera.`;
+      const metadata = await drive.files.get({ fileId, fields: 'name' });
+      const name = metadata.data.name;
+
+      await drive.files.update({ fileId, requestBody: { trashed: true } });
+
+      return `🗑️ **Archivo movido a la papelera**
+${SEP}
+📄 **Nombre:** ${name}
+🆔 **ID:** ${fileId}
+${SEP}`;
     } catch (error) {
       return `Error eliminando de Drive: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+export const moveDriveFileTool: Tool = {
+  name: 'move_drive_file',
+  description: 'Mueve un archivo o carpeta a una nueva ubicación en Drive',
+  parameters: {
+    type: 'object',
+    properties: {
+      file_id: { type: 'string', description: 'ID del archivo o carpeta a mover' },
+      new_parent_id: { type: 'string', description: 'ID de la carpeta destino' },
+    },
+    required: ['file_id', 'new_parent_id'],
+  },
+  execute: async (params, userId) => {
+    const fileId = params.file_id as string;
+    const newParentId = params.new_parent_id as string;
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
+
+    try {
+      // 1. Obtener el archivo y sus padres actuales
+      const file = await drive.files.get({ fileId, fields: 'parents, name' });
+      const currentParents = (file.data.parents || []).join(',');
+
+      // 2. Mover: añadir nuevo, quitar antiguos
+      // NOTA: Si currentParents está vacío, Google lo ignora.
+      await drive.files.update({
+        fileId,
+        addParents: newParentId,
+        removeParents: currentParents || undefined, 
+        fields: 'id, parents',
+      });
+
+      return `✅ **Éxito:** Movi "${file.data.name}" a la nueva ubicación.
+🆔 **Archivo:** ${fileId}
+📂 **Carpeta destino:** ${newParentId}`;
+    } catch (error) {
+      return `Error moviendo en Drive: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+export const updateDriveFileTool: Tool = {
+  name: 'update_drive_file',
+  description: 'Renombra o actualiza los metadatos de un archivo en Drive',
+  parameters: {
+    type: 'object',
+    properties: {
+      file_id: { type: 'string', description: 'ID del archivo a actualizar' },
+      new_name: { type: 'string', description: 'Nuevo nombre para el archivo' },
+    },
+    required: ['file_id', 'new_name'],
+  },
+  execute: async (params, userId) => {
+    const fileId = params.file_id as string;
+    const newName = params.new_name as string;
+    const drive = await getDriveClient(userId);
+    if (!drive) return AUTH_ERROR_MSG(userId);
+
+    try {
+      const response = await drive.files.update({
+        fileId,
+        requestBody: { name: newName },
+        fields: 'id, name, webViewLink',
+      });
+
+      const link = response.data.webViewLink || `https://drive.google.com/file/d/${response.data.id}/view`;
+
+      return `✅ **Archivo actualizado correctamente**
+${SEP}
+📄 **Nuevo Nombre:** ${response.data.name}
+🆔 **ID:** ${response.data.id}
+🔗 **Enlace:** ${link}
+${SEP}`;
+    } catch (error) {
+      return `Error actualizando archivo en Drive: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
 };

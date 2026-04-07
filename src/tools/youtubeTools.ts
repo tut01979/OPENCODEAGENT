@@ -168,23 +168,25 @@ export const searchYoutubeTool: Tool = {
       }
 
       let output = `🎬 **Resultados VERIFICADOS de YouTube para "${query}":**\n\n`;
-      output += `⚠️ IMPORTANTE: Estos son los ÚNICOS enlaces reales. NO inventes otros.\n\n`;
+      output += `⚠️ REGLA CRÍTICA: Solo estos enlaces son reales. NO inventes ni generes otros enlaces de YouTube.\n\n`;
 
       for (const item of validItems) {
         const title = item.snippet?.title || 'Sin título';
         const channel = item.snippet?.channelTitle || 'Canal desconocido';
         const videoId = item.id?.videoId;
+        const description = item.snippet?.description || 'Sin descripción';
 
         // URL verificada de YouTube
         const verifiedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
         output += `📹 **${title}**\n`;
-        output += `   Canal: ${channel}\n`;
-        output += `   🔗 ENLACE VERIFICADO: ${verifiedUrl}\n\n`;
+        output += `   📺 Canal: ${channel}\n`;
+        output += `   🔗 ENLACE VERIFICADO: ${verifiedUrl}\n`;
+        output += `   📝 Resumen: ${description.slice(0, 150)}${description.length > 150 ? '...' : ''}\n\n`;
       }
 
-      output += `---\n_Total: ${validItems.length} videos verificados_\n`;
-      output += `_NO generes más enlaces de los mostrados arriba._`;
+      output += `---\n_Total: ${validItems.length} videos reales encontrados._\n`;
+      output += `_Si no encontraste lo que buscabas, pide una búsqueda más específica._`;
 
       return output;
     } catch (err) {

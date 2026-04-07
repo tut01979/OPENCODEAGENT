@@ -69,7 +69,14 @@ export function generateAuthUrl(userId: string) {
       'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/spreadsheets'
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/youtube',
+      'https://www.googleapis.com/auth/youtube.readonly',
+      'https://www.googleapis.com/auth/youtube.upload',
+      'https://www.googleapis.com/auth/youtubepartner',
+      'https://www.googleapis.com/auth/youtube.force-ssl',
+      'https://www.googleapis.com/auth/yt-analytics.readonly',
+      'https://www.googleapis.com/auth/yt-analytics-monetary.readonly'
     ],
     state: userId // EL TRUCO: Pasamos el ID de Telegram para saber de quién es este token al volver
   });
@@ -92,6 +99,23 @@ export function startAuthServer(port: number = 3000) {
 
     try {
       const { tokens } = await oAuth2Client.getToken(code);
+      
+      console.log(`🔑 Tokens recibidos para usuario ${userId}:`);
+      console.log(`   - access_token: ${tokens.access_token ? 'presente' : 'FALTANTE'}`);
+      console.log(`   - refresh_token: ${tokens.refresh_token ? 'presente' : 'FALTANTE'}`);
+      console.log(`   - scope: ${tokens.scope || 'no incluido en la respuesta'}`);
+      console.log(`   - token_type: ${tokens.token_type || 'no incluido'}`);
+      console.log(`   - expiry_date: ${tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'no incluido'}`);
+      
+      if (!tokens.access_token) {
+        console.error('❌ CRÍTICO: Google no devolvió access_token. Los scopes no fueron concedidos.');
+        return res.status(500).send('❌ Error: Google no concedió los permisos solicitados. Verifica la configuración del proyecto en Google Cloud Console.');
+      }
+      
+      if (!tokens.refresh_token) {
+        console.warn('⚠️ ADVERTENCIA: Google no devolvió refresh_token. Esto puede pasar si ya autorizaste antes. Intenta revocar el acceso en tu cuenta de Google y vuelve a autorizar.');
+      }
+      
       await firebase.saveUserToken(userId, tokens);
       
       res.send(`
@@ -194,7 +218,7 @@ export function startAuthServer(port: number = 3000) {
           </nav>
           <section class="hero">
               <h1>Tu Ejecutivo IA Híbrido</h1>
-              <p>Controla Gmail, Calendar y Drive con la potencia de la Inteligencia Artificial directamente desde Telegram. Multi-usuario, seguro y ultrarrápido.</p>
+              <p>Controla Gmail, Calendar, Drive, Sheets y YouTube con la potencia de la Inteligencia Artificial directamente desde Telegram. Multi-usuario, seguro y ultrarrápido.</p>
               <a href="https://t.me/${config.telegram.botUsername}" class="cta">Empezar Prueba Gratis 7 Días</a>
           </section>
           <div class="features">
@@ -205,6 +229,14 @@ export function startAuthServer(port: number = 3000) {
               <div class="card">
                   <h3>📅 Agenda Inteligente</h3>
                   <p>Consulta tus eventos, crea reuniones y sincroniza tu vida laboral sin salir de Telegram.</p>
+              </div>
+              <div class="card">
+                  <h3>☁️ Drive y Sheets</h3>
+                  <p>Sube archivos, organiza carpetas, gestiona hojas de cálculo y comparte documentos directamente desde el chat.</p>
+              </div>
+              <div class="card">
+                  <h3>🎬 YouTube Studio</h3>
+                  <p>Sube videos, consulta analytics, gestiona comentarios y actualiza metadatos de tu canal sin salir de Telegram.</p>
               </div>
               <div class="card">
                   <h3>🧠 Visión Híbrida</h3>
