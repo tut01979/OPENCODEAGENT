@@ -11,6 +11,8 @@
     "authorize": "tsx src/authorize.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-polly": "^3.1029.0",
+    "axios": "^1.15.0",
     "better-sqlite3": "^11.8.1",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",

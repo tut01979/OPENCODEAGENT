@@ -15,7 +15,7 @@ if (!fs.existsSync(CREDENTIALS_PATH)) {
 
 export function getOAuth2Client() {
   let credentials;
-  
+
   // NATIVO CLOUD: Priorizar variable de entorno con el JSON puro antes que archivos
   if (process.env.GMAIL_CREDENTIALS_JSON) {
     console.log("🔑 Usando GMAIL_CREDENTIALS_JSON desde variables de entorno");
@@ -28,12 +28,12 @@ export function getOAuth2Client() {
     }
     credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf-8'));
   }
-  
+
   const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-  
+
   // DETECCIÓN DINÁMICA DE REDIRECT URI
   let redirectUri = redirect_uris[0];
-  
+
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
     redirectUri = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/auth/google/callback`;
   } else if (process.env.NODE_ENV === 'production') {
@@ -63,10 +63,10 @@ export function generateAuthUrl(userId: string) {
 
   return oAuth2Client.generateAuthUrl({
     access_type: 'offline',
-    prompt: 'consent', // Forzamos refresh_token para que no caduque su acceso nunca
+    prompt: 'consent',
+    response_type: 'code',           // ← Esto era lo que faltaba
     scope: [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/spreadsheets',
@@ -78,7 +78,8 @@ export function generateAuthUrl(userId: string) {
       'https://www.googleapis.com/auth/yt-analytics.readonly',
       'https://www.googleapis.com/auth/yt-analytics-monetary.readonly'
     ],
-    state: userId // EL TRUCO: Pasamos el ID de Telegram para saber de quién es este token al volver
+    state: userId,
+    include_granted_scopes: true
   });
 }
 
@@ -99,30 +100,38 @@ export function startAuthServer(port: number = 3000) {
 
     try {
       const { tokens } = await oAuth2Client.getToken(code);
-      
+
       console.log(`🔑 Tokens recibidos para usuario ${userId}:`);
       console.log(`   - access_token: ${tokens.access_token ? 'presente' : 'FALTANTE'}`);
       console.log(`   - refresh_token: ${tokens.refresh_token ? 'presente' : 'FALTANTE'}`);
-      console.log(`   - scope: ${tokens.scope || 'no incluido en la respuesta'}`);
-      console.log(`   - token_type: ${tokens.token_type || 'no incluido'}`);
-      console.log(`   - expiry_date: ${tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'no incluido'}`);
-      
+
       if (!tokens.access_token) {
-        console.error('❌ CRÍTICO: Google no devolvió access_token. Los scopes no fueron concedidos.');
-        return res.status(500).send('❌ Error: Google no concedió los permisos solicitados. Verifica la configuración del proyecto en Google Cloud Console.');
+        console.error('❌ CRÍTICO: Google no devolvió access_token.');
+        return res.status(500).send('❌ Error: Google no concedió los permisos.');
       }
-      
+
+      // 🔄 Lógica de Preservación de Refresh Token para evitar expiraciones
+      let finalTokens = { ...tokens };
       if (!tokens.refresh_token) {
-        console.warn('⚠️ ADVERTENCIA: Google no devolvió refresh_token. Esto puede pasar si ya autorizaste antes. Intenta revocar el acceso en tu cuenta de Google y vuelve a autorizar.');
+        console.log(`🔍 Buscando refresh_token antiguo para ${userId}...`);
+        const oldToken = await firebase.getUserToken(userId);
+        if (oldToken && oldToken.refresh_token) {
+          console.log(`✅ refresh_token preservado desde Firebase.`);
+          finalTokens.refresh_token = oldToken.refresh_token;
+        } else {
+          console.warn('⚠️ No se encontró refresh_token antiguo. El usuario deberá revocar el acceso en Google para obtener uno nuevo.');
+        }
       }
-      
-      await firebase.saveUserToken(userId, tokens);
-      
+
+      await firebase.saveUserToken(userId, finalTokens);
+
       res.send(`
-        <div style="font-family: sans-serif; text-align: center; margin-top: 50px;">
-          <h1 style="color: #4CAF50;">✅ ¡Conexión Exitosa!</h1>
-          <p>Tu OpenCodeAgent ya tiene acceso a tus herramientas de Google.</p>
-          <p><strong>Ya puedes cerrar esta ventana y volver a Telegram.</strong></p>
+        <div style="font-family: sans-serif; text-align: center; margin-top: 50px; background: #0f172a; color: white; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0;">
+          <h1 style="color: #4CAF50; font-size: 3rem;">✅ ¡Conexión Exitosa!</h1>
+          <p style="font-size: 1.2rem; color: #94a3b8;">Tu OpenCodeAgent ya tiene acceso a tus herramientas de Google.</p>
+          <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+             <p><strong>Ya puedes cerrar esta ventana y volver a Telegram.</strong></p>
+          </div>
         </div>
       `);
       console.log(`📡 Cliente conectado con éxito: ${userId}`);

@@ -7,11 +7,13 @@ export interface Tool {
       type: string;
       description: string;
       enum?: string[];
+      items?: { type: string };
     }>;
     required?: string[];
   };
   execute: (params: Record<string, unknown>, userId: string) => Promise<string> | string;
 }
+
 
 export interface ToolCall {
   id: string;

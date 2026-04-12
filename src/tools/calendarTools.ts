@@ -100,12 +100,13 @@ ${SEP}`;
 
 export const listEventsTool: Tool = {
   name: 'list_events',
-  description: 'Lista los proximos eventos de Google Calendar',
+  description: 'Lista los proximos eventos de Google Calendar. Usa days_ahead=1 para ver los de hoy.',
   parameters: {
     type: 'object',
     properties: {
       max_results: { type: 'number', description: 'Maximo eventos (default 10)' },
-      days_ahead: { type: 'number', description: 'Dias hacia adelante (default 7)' },
+      days_ahead: { type: 'number', description: 'Dias hacia adelante desde hoy a las 00:00 (default 7)' },
+      start_date: { type: 'string', description: 'Fecha inicio ISO opcional (ej: 2026-04-11T00:00:00). Si no se indica usa las 00:00 de hoy.' },
     },
     required: [],
   },
@@ -117,14 +118,22 @@ export const listEventsTool: Tool = {
     if (!calendar) return AUTH_ERROR_MSG(userId);
 
     try {
-      const now = new Date();
-      const future = new Date();
-      future.setDate(future.getDate() + daysAhead);
+      // Usar inicio del día (00:00) en lugar de "ahora" para no perder eventos matutinos
+      let timeMin: Date;
+      if (params.start_date) {
+        timeMin = new Date(params.start_date as string);
+      } else {
+        timeMin = new Date();
+        timeMin.setHours(0, 0, 0, 0); // inicio del día local
+      }
+
+      const timeMax = new Date(timeMin);
+      timeMax.setDate(timeMax.getDate() + daysAhead);
 
       const response = await calendar.events.list({
         calendarId: 'primary',
-        timeMin: now.toISOString(),
-        timeMax: future.toISOString(),
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
         maxResults,
         singleEvents: true,
         orderBy: 'startTime',
@@ -132,7 +141,7 @@ export const listEventsTool: Tool = {
 
       const events = response.data.items || [];
       if (events.length === 0) {
-        return `No hay eventos en los proximos ${daysAhead} dias.`;
+        return `No hay eventos en los proximos ${daysAhead} dias (desde ${timeMin.toLocaleDateString('es-ES')}).`;
       }
 
       let output = `Tienes ${events.length} eventos proximos:\n\n`;

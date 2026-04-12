@@ -117,7 +117,10 @@ export const writeSheetTool: Tool = {
 
     try {
       // Parsear valores
-      const rows = valuesStr.split(';').map(row => row.split(',').map(cell => cell.trim()));
+      const rows = valuesStr.split(';').map(row => {
+        const matches = row.match(/(".*?"|[^,;]+)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, '').trim()) : [];
+      });
 
       await sheets.spreadsheets.values.update({
         spreadsheetId,
@@ -165,7 +168,10 @@ export const appendSheetTool: Tool = {
     if (!sheets) return AUTH_ERROR_MSG(userId);
 
     try {
-      const rows = valuesStr.split(';').map(row => row.split(',').map(cell => cell.trim()));
+      const rows = valuesStr.split(';').map(row => {
+        const matches = row.match(/(".*?"|[^,;]+)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, '').trim()) : [];
+      });
 
       await sheets.spreadsheets.values.append({
         spreadsheetId,

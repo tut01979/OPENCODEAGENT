@@ -41,7 +41,7 @@ async function callOllama(messages: Message[], tools?: unknown[]): Promise<LLMRe
       messages: ollamaMessages,
       stream: false,
       options: {
-        temperature: 0.25,
+        temperature: 0.3,
       },
     }),
   });
@@ -101,7 +101,7 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0.25,
+      temperature: 0.3,
     }),
   });
 
@@ -136,7 +136,7 @@ async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0.25,  // Baja temperatura para máxima precisión y reducir alucinaciones
+      temperature: 0.3,  // Deterministic behavior for maximum precision and reducing hallucinations
     }),
   });
 

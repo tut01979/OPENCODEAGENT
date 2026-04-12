@@ -11,6 +11,14 @@ export interface AgentResult {
   usedTools: string[];
 }
 
+const DANGEROUS_TOOLS = [
+  'delete_drive_file',
+  'send_gmail',
+  'move_drive_file',
+  'delete_youtube_video'
+];
+
+
 function toAPIToolCall(toolCall: ToolCall): APIToolCall {
   return {
     id: toolCall.id,
@@ -88,6 +96,16 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
       // Execute tool calls
       for (const toolCall of response.toolCalls) {
         usedTools.push(toolCall.name);
+        
+        // 🛡️ CONFIRMACIÓN DE ACCIONES PELIGROSAS
+        if (DANGEROUS_TOOLS.includes(toolCall.name)) {
+          console.log(`⚠️ Interceptada herramienta peligrosa: ${toolCall.name}. Solicitando confirmación...`);
+          memory.setPendingAction(userId, toolCall);
+          const warning = `⚠️ Esta acción (${toolCall.name}) es irreversible y afectará a tus archivos o comunicaciones reales. ¿Estás seguro? Responde **SÍ** para continuar.`;
+          memory.saveMessage(userId, 'assistant', warning);
+          return { response: warning, iterations, usedTools };
+        }
+
         console.log(`🛠️ Ejecutando: ${toolCall.name}...`);
         const result = await executeToolCall(toolCall, userId);
         console.log(`📥 Resultado ${toolCall.name} (${typeof result.content === 'string' ? result.content.length : 0} chars)`);

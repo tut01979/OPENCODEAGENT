@@ -42,32 +42,56 @@ export function cleanTextForSpeech(text: string): string[] {
 
   let cleaned = text;
 
+  // 1. Omitir bloques de código y tablas
   cleaned = cleaned.replace(/```[\s\S]*?```/g, ' bloque de código omitido. ');
   cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
   cleaned = cleaned.replace(/\|[\s\S]*?\|/g, ' ');
-  cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  cleaned = cleaned.replace(/https?:\/\/[^\s<\)]+/g, '');
-  cleaned = cleaned.replace(/[*_#~>]/g, '');
-  cleaned = cleaned.replace(/^-+\s*$/gm, '');
-  cleaned = cleaned.replace(/={2,}/g, '');
-  // Eliminar caracteres de dibujo de cajas (separadores premium) y otros símbolos que rompen el TTS
-  cleaned = cleaned.replace(/[\u2500-\u257F]/g, ''); 
-  // Eliminar emojis y símbolos variados (Unicode blocks)
-  cleaned = cleaned.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{23E9}-\u{23EF}\u{23F8}-\u{23FA}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}]/gu, '');
+
+  // 2. REGLA: Sustituir enlaces/URLs por "enlace en pantalla"
+  // Markdown links: [texto](url) -> "texto, enlace en pantalla"
+  cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1. Enlace en pantalla. ');
+  // URLs directas (más agresivo)
+  cleaned = cleaned.replace(/(https?:\/\/[^\s<>)"']+)/g, ' enlace en pantalla ');
   
-  cleaned = cleaned.replace(/\bEnlace\b/gi, '');
+  // 3. REGLA: Eliminar emojis y caracteres raros completamente
+  // Eliminar símbolos de Markdown (preservamos guiones entre palabras pero quitamos delimitadores)
+  cleaned = cleaned.replace(/[*#~>]/g, '');
+  cleaned = cleaned.replace(/(\s)_|(_\s)|^_|(_$)/g, '$1 '); // Quitar underscores de formato pero no los internos de palabras técnicas si quedan
+  
+  // Eliminar caracteres de dibujo de cajas y separadores
+  cleaned = cleaned.replace(/[\u2500-\u257F\u2580-\u259F]/g, '');
+  // Eliminar emojis garantizando cobertura total (Unicode planes)
+  cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F200}-\u{1F2FF}\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu, '');
+  // Eliminar otros símbolos técnicos que la voz lee mal
+  cleaned = cleaned.replace(/[\\^°@$€&%+={}[\]]/g, ' ');
+
+  // 4. Limpieza de espacios y puntuación para fluidez natural
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   cleaned = cleaned.replace(/\s+([.,!?;:])/g, '$1');
   cleaned = cleaned.replace(/([.!?])([A-ZÁÉÍÓÚÑ])/g, '$1 $2');
   
-  // Reemplazos fonéticos para mejor lectura
+  // Reemplazos fonéticos premium (Español)
   cleaned = cleaned.replace(/v1\.4\.1/gi, 'versión uno punto cuatro punto uno');
   cleaned = cleaned.replace(/v1\.4/gi, 'versión uno punto cuatro');
-  cleaned = cleaned.replace(/SaaS/gi, 'Sás');
-  cleaned = cleaned.replace(/AI/gi, 'I.A.');
-  cleaned = cleaned.replace(/LLM/gi, 'L.L.M.');
-  cleaned = cleaned.replace(/PDF/gi, 'P.D.F.');
-  cleaned = cleaned.replace(/URL/gi, 'U.R.L.');
+  cleaned = cleaned.replace(/\bSaaS\b/gi, 'Sás');
+  cleaned = cleaned.replace(/\bAI\b/gi, 'I.A.');
+  cleaned = cleaned.replace(/\bGPT\b/gi, 'ye pe té');
+  cleaned = cleaned.replace(/\bLLM\b/gi, 'L.L.M.');
+  cleaned = cleaned.replace(/\bPDF\b/gi, 'P.D.F.');
+  cleaned = cleaned.replace(/\bURL\b/gi, 'U.R.L.');
+  cleaned = cleaned.replace(/\bDrive\b/gi, 'Draiv');
+  cleaned = cleaned.replace(/\bGmail\b/gi, 'Yimeil');
+  cleaned = cleaned.replace(/\bGoogle\b/gi, 'Gúgel');
+  cleaned = cleaned.replace(/\bStripe\b/gi, 'Estraip');
+  cleaned = cleaned.replace(/\bTelegram\b/gi, 'Télegram');
+  cleaned = cleaned.replace(/\bbot\b/gi, 'bót');
+  cleaned = cleaned.replace(/\bWhatsApp\b/gi, 'guasáp');
+  cleaned = cleaned.replace(/\bOAuth2\b/gi, 'O-Aut dos');
+  cleaned = cleaned.replace(/\bCalendar\b/gi, 'Cálendar');
+  cleaned = cleaned.replace(/\bSheets\b/gi, 'Shíts');
+  cleaned = cleaned.replace(/\bYouTube\b/gi, 'Yutub');
+
+
 
   const MAX_CHUNK = 3000;
   if (cleaned.length <= MAX_CHUNK) {

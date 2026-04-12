@@ -408,15 +408,24 @@ export const searchEmailsTool: Tool = {
       if (!gmail) return AUTH_ERROR_MSG(userId);
 
       const query = params.query as string;
-      const maxResults = params.max_results as number || 10;
+      const maxResultsLimit = params.max_results as number || 50; // Aumentamos límite para búsquedas
+      let messages: any[] = [];
+      let pageToken: string | undefined;
 
-      const res = await gmail.users.messages.list({
-        userId: 'me',
-        q: query,
-        maxResults,
-      });
+      // Loop de paginación para no ser "flojos"
+      do {
+        const res: any = await gmail.users.messages.list({
+          userId: 'me',
+          q: query,
+          maxResults: Math.min(maxResultsLimit - messages.length, 100),
+          pageToken,
+        });
 
-      const messages = res.data.messages || [];
+        if (res.data.messages) {
+          messages.push(...res.data.messages);
+        }
+        pageToken = res.data.nextPageToken;
+      } while (pageToken && messages.length < maxResultsLimit);
       if (messages.length === 0) return `No se encontraron correos para: "${query}"`;
 
       let output = `🔍 **${messages.length} resultados para "${query}":**\n\n`;

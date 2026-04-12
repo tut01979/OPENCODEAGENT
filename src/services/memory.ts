@@ -42,6 +42,12 @@ class MemoryService {
       
       CREATE INDEX IF NOT EXISTS idx_conversations_timestamp 
       ON conversations(timestamp);
+
+      CREATE TABLE IF NOT EXISTS pending_actions (
+        userId TEXT PRIMARY KEY,
+        toolCall TEXT NOT NULL,
+        timestamp INTEGER NOT NULL DEFAULT (unixepoch())
+      );
     `);
   }
 
@@ -110,10 +116,34 @@ class MemoryService {
     const stmt = this.db.prepare('DELETE FROM conversations WHERE userId = ?');
     stmt.run(userId);
 
+    // Limpiar acción pendiente si existe
+    this.clearPendingAction(userId);
+
     // Limpiar Firebase en segundo plano
     firebase.clearConversation(userId).catch(err => {
       console.error('Error limpiando Firebase:', err);
     });
+  }
+
+  setPendingAction(userId: string, toolCall: any): void {
+    const stmt = this.db.prepare(
+      'INSERT OR REPLACE INTO pending_actions (userId, toolCall) VALUES (?, ?)'
+    );
+    stmt.run(userId, JSON.stringify(toolCall));
+  }
+
+  getPendingAction(userId: string): any | null {
+    const stmt = this.db.prepare('SELECT toolCall FROM pending_actions WHERE userId = ?');
+    const row = stmt.get(userId) as { toolCall: string } | undefined;
+    if (row) {
+      return JSON.parse(row.toolCall);
+    }
+    return null;
+  }
+
+  clearPendingAction(userId: string): void {
+    const stmt = this.db.prepare('DELETE FROM pending_actions WHERE userId = ?');
+    stmt.run(userId);
   }
 
   close(): void {

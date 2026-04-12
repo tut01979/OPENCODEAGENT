@@ -62,6 +62,10 @@ export const config = {
     elevenlabsVoiceIds: (getEnv('ELEVENLABS_VOICE_IDS', false) || 'l1zE9xgNpUTaQCZzpNJa,8MeTTgXVwMEhRVfblXOj,6un5jIrLUaTPf56cFT5V').split(',').map(s => s.trim()),
     // Nombres descriptivos para los logs
     elevenlabsVoiceNames: (getEnv('ELEVENLABS_VOICE_NAMES', false) || 'Alberto Rodriguez,Carlos Aguilar,Nova').split(',').map(s => s.trim()),
+    awsAccessKey: getEnv('AWS_ACCESS_KEY_ID', false) || '',
+    awsSecretKey: getEnv('AWS_SECRET_ACCESS_KEY', false) || '',
+    awsRegion: getEnv('AWS_REGION', false) || 'us-east-1',
+    pollyVoice: getEnv('AWS_POLLY_VOICE', false) || 'Lucia',
   },
   payments: {
     stripeSecretKey: getEnv('STRIPE_SECRET_KEY', false),
