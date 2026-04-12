@@ -49,11 +49,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 
-# Forzamos copiar desde /app/data (builder) hacia ./credentials para que
-# los archivos actualizados anulen los del volumen persistente en Railway.
-COPY --from=builder /app/data/gmail-credentials.json* ./credentials/
-COPY --from=builder /app/service-account.json* ./
-COPY --from=builder /app/token.json* ./
+# Copiar credenciales solo si existen en el contexto de construcción
+# (Nota: Recomendamos usar variables de entorno para producción)
+COPY service-account.json* ./
+COPY token.json* ./
+COPY gmail-credentials.json* ./credentials/
 
 # Variables de entorno por defecto (en Railway se configuran en el Dashboard)
 ENV NODE_ENV=production
