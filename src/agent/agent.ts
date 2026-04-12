@@ -94,38 +94,46 @@ export async function runAgent(userId: string, userInput: string | any[]): Promi
       }
 
       // Execute tool calls
-      for (const toolCall of response.toolCalls) {
-        usedTools.push(toolCall.name);
-        
-        // 🛡️ CONFIRMACIÓN DE ACCIONES PELIGROSAS
-        if (DANGEROUS_TOOLS.includes(toolCall.name)) {
-          console.log(`⚠️ Interceptada herramienta peligrosa: ${toolCall.name}. Solicitando confirmación...`);
-          memory.setPendingAction(userId, toolCall);
-          const warning = `⚠️ Esta acción (${toolCall.name}) es irreversible y afectará a tus archivos o comunicaciones reales. ¿Estás seguro? Responde **SÍ** para continuar.`;
-          memory.saveMessage(userId, 'assistant', warning);
-          return { response: warning, iterations, usedTools };
-        }
-
-        console.log(`🛠️ Ejecutando: ${toolCall.name}...`);
-        const result = await executeToolCall(toolCall, userId);
-        console.log(`📥 Resultado ${toolCall.name} (${typeof result.content === 'string' ? result.content.length : 0} chars)`);
-        
-        // 🛡️ INTERCEPCIÓN DE SEGURIDAD SAAS
-        // Si la herramienta devuelve un link de inicio de sesión o indica falta de conexión,
-        // cortocircuitamos el flujo para asegurar que el usuario vea el enlace intacto.
-        const content = typeof result.content === 'string' ? result.content : '';
-        if (content.includes('🔗') || content.includes('authorization') || content.includes('No estás conectado')) {
-          console.log(`🔗 Interceptado enlace de autorización. Deteniendo agente.`);
-          memory.saveMessage(userId, 'assistant', content);
-          return { response: content, iterations, usedTools };
-        }
-
-        messages.push({
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        // Agrupar todas las llamadas en un único mensaje del asistente (estándar OpenAI/Gemini)
+        const assistantToolMessage: Message = {
           role: 'assistant',
-          content: null,
-          tool_calls: [toAPIToolCall(toolCall)],
-        });
-        messages.push(result);
+          content: response.content || null,
+          tool_calls: response.toolCalls.map(tc => toAPIToolCall(tc))
+        };
+        messages.push(assistantToolMessage);
+
+        for (const toolCall of response.toolCalls) {
+          usedTools.push(toolCall.name);
+          
+          // 🛡️ CONFIRMACIÓN DE ACCIONES PELIGROSAS
+          if (DANGEROUS_TOOLS.includes(toolCall.name)) {
+            console.log(`⚠️ Interceptada herramienta peligrosa: ${toolCall.name}. Solicitando confirmación...`);
+            memory.setPendingAction(userId, toolCall);
+            // Si hay otras herramientas en la misma vuelta, se perderán, pero es mejor por seguridad.
+            const warning = `⚠️ Esta acción (${toolCall.name}) es irreversible y afectará a tus archivos o comunicaciones reales. ¿Estás seguro? Responde **SÍ** para continuar.`;
+            memory.saveMessage(userId, 'assistant', warning);
+            return { response: warning, iterations, usedTools };
+          }
+
+          console.log(`🛠️ Ejecutando [${userId}]: ${toolCall.name}...`);
+          const result = await executeToolCall(toolCall, userId);
+          console.log(`📥 Resultado ${toolCall.name}: ${typeof result.content === 'string' ? result.content.substring(0, 50) : 'binary'}...`);
+          
+          // 🛡️ INTERCEPCIÓN DE SEGURIDAD SAAS (Auth links)
+          const content = typeof result.content === 'string' ? result.content : '';
+          if (content.includes('🔗') || content.includes('authorization') || content.includes('No estás conectado')) {
+            console.log(`🔗 Interceptado enlace de autorización. Deteniendo agente.`);
+            memory.saveMessage(userId, 'assistant', content);
+            return { response: content, iterations, usedTools };
+          }
+
+          // Añadir el resultado de la herramienta al historial
+          messages.push(result);
+        }
+        
+        // Continuar el bucle while para que el LLM vea los resultados y decida qué hacer
+        continue;
       }
     }
 

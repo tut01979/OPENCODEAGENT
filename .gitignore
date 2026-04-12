@@ -5,4 +5,12 @@ dist/
 service-account.json
 gmail-credentials.json
 token.json
+railway_vars.txt
+opencode_accesskeys.csv
+*.log
+logs.txt
+temp_voice_*.mp3
+temp_voice_*.ogg
+uploads/
+data/
 
