@@ -11,10 +11,11 @@ import { textToSpeechTool } from './voiceTools.js';
 import { readSheetTool, writeSheetTool, appendSheetTool, createSheetTool, listSheetsTool } from './sheetsTools.js';
 import { getSubscriptionLinkTool, checkSubscriptionStatusTool } from './paymentTools.js';
 import { searchYoutubeTool, listMyVideosTool, getVideoDetailsTool, uploadToYouTubeTool, getChannelAnalyticsTool, listYouTubeCommentsTool, updateYouTubeVideoTool, deleteYouTubeVideoTool, getYoutubeAuthLinkTool } from './youtubeTools.js';
+import { testVoiceTool } from './diagnostics.js';
 import { payments } from '../services/payments.js';
 
 const tools: Map<string, Tool> = new Map();
-const FREE_TOOLS = ['get_subscription_link', 'check_subscription_status', 'get_current_time', 'get_calendar_link', 'help', 'start'];
+const FREE_TOOLS = ['get_subscription_link', 'check_subscription_status', 'get_current_time', 'get_calendar_link', 'help', 'start', 'test_voice'];
 
 export function registerTool(tool: Tool): void {
   tools.set(tool.name, tool);
@@ -128,3 +129,4 @@ registerTool(listYouTubeCommentsTool);
 registerTool(updateYouTubeVideoTool);
 registerTool(deleteYouTubeVideoTool);
 registerTool(getYoutubeAuthLinkTool);
+registerTool(testVoiceTool);

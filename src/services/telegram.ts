@@ -8,9 +8,8 @@ import { runAgent, clearUserMemory } from '../agent/agent.js';
 import { transcribeAudio } from '../tools/voiceTools.js';
 import { payments } from './payments.js';
 import { firebase } from './firebase.js';
-import { cleanTextForSpeech } from '../utils/sanitize.js';
 import { voiceService } from './voiceService.js';
-import { getDriveClient } from '../tools/driveTools.js';
+import { getDriveClient, getOrCreateUploadsFolder } from '../tools/driveTools.js';
 import { memory } from './memory.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -238,7 +237,6 @@ export function createBot(): Bot {
   });
 
   async function processDocumentMessage(ctx: any, userId: string, doc: any) {
-    await ctx.reply('📎 Recibido archivo. Analizando...');
     try {
       const fileId = doc.file_id;
       const fileName = doc.file_name || `doc_${Date.now()}`;
@@ -249,17 +247,17 @@ export function createBot(): Bot {
       const localPath = path.join(UPLOADS_DIR, fileName);
       fs.writeFileSync(localPath, Buffer.from(res.data));
 
-      const driveUrl = await uploadToDriveAuto(userId, localPath, fileName, ctx);
+      const driveUrl = await uploadToDriveAuto(userId, localPath, fileName);
       
       let replyText = `✅ Archivo **${fileName}** recibido.`;
       if (driveUrl) {
-        replyText += `\n\n📂 [Ver en Google Drive](${driveUrl})`;
+        replyText += `\n\n📂 Guardado en la carpeta **opencodeagent_uploads** de tu Drive.\n🔗 [Ver en Google Drive](${driveUrl})`;
       }
 
       await ctx.reply(replyText, { parse_mode: 'Markdown' });
       
       // Notificar al agente para que tenga el contexto
-      await runAgent(userId, `He subido un archivo llamado "${fileName}" a mi Drive.`);
+      await runAgent(userId, `He subido un archivo llamado "${fileName}" a mi carpeta 'opencodeagent_uploads' en Drive.`);
     } catch (error) {
       console.error('Error procesando documento:', error);
       await ctx.reply('❌ Error al procesar el archivo.');
@@ -280,13 +278,31 @@ export function createBot(): Bot {
       const file = await ctx.api.getFile(fileId);
       const url = `https://api.telegram.org/file/bot${config.telegram.botToken}/${file.file_path}`;
       
-      // Enviar al agente como contexto
-      await runAgent(userId, `[SISTEMA] El usuario ha enviado una imagen. Analízala si tienes herramientas de visión.`);
-      await ctx.reply('He recibido la imagen. ¿Qué quieres que haga con ella?');
+      // Descargar para Base64
+      const axiosRes = await axios.get(url, { responseType: 'arraybuffer' });
+      const buffer = Buffer.from(axiosRes.data);
+      const base64 = buffer.toString('base64');
+      const dataUri = `data:image/jpeg;base64,${base64}`;
+
+      const result = await runAgent(userId, `[SISTEMA: El usuario ha enviado una imagen. Analízala y responde profesionalmente.]`, dataUri);
+      await sendLongMessage(ctx, result.response, 'Markdown');
+      
+      // Auto-upload a Drive
+      const fileName = `Vision_${Date.now()}.jpg`;
+      const localPath = path.join(UPLOADS_DIR, fileName);
+      fs.writeFileSync(localPath, buffer);
+      
+      const driveUrl = await uploadToDriveAuto(userId, localPath, fileName);
+      if (driveUrl) {
+        await ctx.reply(`📂 Imagen guardada en la carpeta **opencodeagent_uploads**\n🔗 [Ver en Drive](${driveUrl})`, { parse_mode: 'Markdown' });
+      }
+
     } catch (error) {
       console.error('Error procesando foto:', error);
+      await ctx.reply('❌ No pude analizar la imagen debido a un error técnico.');
     }
   }
+
 
   return bot;
 }
@@ -294,20 +310,62 @@ export function createBot(): Bot {
 async function sendLongMessage(ctx: any, message: string, parse_mode?: any): Promise<void> {
   const MAX_LENGTH = 4000;
   if (!message) return;
-  const parts = message.length > MAX_LENGTH ? [message.slice(0, MAX_LENGTH)] : [message]; 
-  const options = parse_mode ? { parse_mode } : {};
-  for (const part of parts) {
-    try { await ctx.reply(part, options); } 
-    catch { await ctx.reply(part); }
+
+  // Si el mensaje es corto, enviarlo tal cual
+  if (message.length <= MAX_LENGTH) {
+    try {
+      await ctx.reply(message, { parse_mode });
+      return;
+    } catch (err) {
+      console.warn('⚠️ Error enviando mensaje con Markdown, reintentando sin formato:', err);
+      await ctx.reply(message);
+      return;
+    }
+  }
+
+  // Fragmentar el mensaje respetando párrafos si es posible
+  const chunks: string[] = [];
+  let remaining = message;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= MAX_LENGTH) {
+      chunks.push(remaining);
+      break;
+    }
+
+    // Buscar el mejor punto de corte (salto de línea)
+    let cutPoint = remaining.lastIndexOf('\n', MAX_LENGTH);
+    if (cutPoint === -1 || cutPoint < MAX_LENGTH * 0.8) {
+      cutPoint = MAX_LENGTH; // Si no hay buen corte, cortar en el límite
+    }
+
+    chunks.push(remaining.slice(0, cutPoint));
+    remaining = remaining.slice(cutPoint).trim();
+  }
+
+  for (let i = 0; i < chunks.length; i++) {
+    const part = chunks[i];
+    const prefix = chunks.length > 1 ? `[${i + 1}/${chunks.length}] ` : '';
+    try {
+      await ctx.reply(prefix + part, { parse_mode });
+    } catch (err) {
+      await ctx.reply(prefix + part);
+    }
   }
 }
 
-async function uploadToDriveAuto(userId: string, filePath: string, fileName: string, ctx: any): Promise<string | undefined> {
+async function uploadToDriveAuto(userId: string, filePath: string, fileName: string): Promise<string | undefined> {
   try {
     const drive = await getDriveClient(userId);
     if (!drive) return undefined;
 
-    const fileMetadata = { name: fileName };
+    const parentId = await getOrCreateUploadsFolder(drive);
+
+    const fileMetadata: any = { 
+      name: fileName,
+      parents: parentId ? [parentId] : undefined
+    };
+    
     const media = {
       mimeType: 'application/octet-stream',
       body: fs.createReadStream(filePath),

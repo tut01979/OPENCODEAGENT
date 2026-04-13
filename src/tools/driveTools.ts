@@ -74,6 +74,30 @@ async function fetchAllFiles(drive: any, q: string, fields = 'files(id, name, mi
   }
 }
 
+// 📂 Obtiene o crea la carpeta de uploads oficial
+export async function getOrCreateUploadsFolder(drive: any) {
+  try {
+    const q = "name = 'opencodeagent_uploads' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+    const res = await drive.files.list({ q, fields: 'files(id, name)' });
+    if (res.data.files && res.data.files.length > 0) {
+      return res.data.files[0].id;
+    }
+    
+    // Crear si no existe
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: 'opencodeagent_uploads',
+        mimeType: 'application/vnd.google-apps.folder'
+      },
+      fields: 'id'
+    });
+    return createRes.data.id;
+  } catch (err) {
+    console.error('Error gestionando carpeta uploads:', err);
+    return null;
+  }
+}
+
 // 🔍 Resuelve el ID de una carpeta por nombre (busca la primera coincidencia exacta)
 async function resolveFolder(drive: any, folderName: string): Promise<{ id: string; name: string } | null> {
   const safeName = folderName.replace(/'/g, "\\'");
@@ -164,45 +188,50 @@ export const searchDriveFilesTool: Tool = {
     type: 'object',
     properties: {
       query: { type: 'string', description: 'Nombre o parte del nombre a buscar' },
+      only_folders: { type: 'boolean', description: 'Si es true, solo buscará carpetas' },
+      only_files: { type: 'boolean', description: 'Si es true, solo buscará archivos' },
     },
     required: ['query'],
   },
   execute: async (params, userId) => {
     const qTerm = params.query as string;
+    const onlyFolders = params.only_folders as boolean | undefined;
+    const onlyFiles = params.only_files as boolean | undefined;
+
     const drive = await getDriveClient(userId);
     if (!drive) return AUTH_ERROR_MSG(userId);
 
     try {
       // Escapar comillas simples para evitar errores en la query
       const safeQuery = qTerm.replace(/'/g, "\\'");
-      const q = `name contains '${safeQuery}' and trashed = false`;
+      let q = `name contains '${safeQuery}' and trashed = false`;
+      if (onlyFolders) q += ` and mimeType = 'application/vnd.google-apps.folder'`;
+      if (onlyFiles) q += ` and mimeType != 'application/vnd.google-apps.folder'`;
       
       const files = await fetchAllFiles(drive, q);
 
-      if (files.length === 0) return `No se encontraron archivos o carpetas que contengan: "${qTerm}" en todo el Drive.`;
+      if (files.length === 0) return `No se encontraron ${onlyFolders ? 'carpetas' : 'archivos'} que contengan: "${qTerm}"`;
 
-      let output = `🔍 **${files.length} resultados encontrados para "${qTerm}" (Acceso Total):**\n\n`;
+      // Separar carpetas y archivos
+      const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+      const realFiles = files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+
+      let output = `🔍 **Resultados para "${qTerm}":**\n`;
+      output += `Total: ${files.length} (${folders.length} carpetas, ${realFiles.length} archivos)\n\n`;
       
-      // Limitar la salida textual para no saturar al agente si hay demasiados resultados, 
-      // pero indicar el total real.
-      const displayCount = Math.min(files.length, 30);
+      const displayList = [...folders, ...realFiles].slice(0, 40);
       
-      for (let i = 0; i < displayCount; i++) {
-        const f = files[i];
+      for (const f of displayList) {
         const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
         const icon = isFolder ? '📁' : '📄';
         const link = f.webViewLink || (isFolder ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`);
+        const size = f.size ? `${(Number(f.size) / 1024).toFixed(1)} KB` : (isFolder ? 'Carpeta' : 'N/A');
         
-        output += `${SEP}
-${icon} **${f.name}**
-**Tipo:** ${f.mimeType || 'Desconocido'}
-**ID:** \`${f.id}\`
-🔗 **Enlace directo:** ${link}
-${SEP}\n\n`;
+        output += `${icon} **${f.name}** | \`${f.id}\` | ${size}\n`;
       }
 
-      if (files.length > displayCount) {
-        output += `\n... y ${files.length - displayCount} resultados más. Sé más específico en tu búsqueda si no encuentras lo que buscas.`;
+      if (files.length > 40) {
+        output += `\n... y ${files.length - 40} resultados más.`;
       }
 
       return sanitizeOutput(output);
@@ -278,6 +307,8 @@ export const listDriveFilesTool: Tool = {
       max_results: { type: 'number', description: 'Maximo archivos a mostrar (default 20)' },
       folder_id: { type: 'string', description: 'ID exacto de la carpeta (opcional, tiene prioridad sobre folder_name)' },
       folder_name: { type: 'string', description: 'Nombre de la carpeta a listar (se busca automáticamente en Drive)' },
+      only_folders: { type: 'boolean', description: 'Si es true, solo mostrará carpetas' },
+      only_files: { type: 'boolean', description: 'Si es true, solo mostrará archivos (no carpetas)' },
     },
     required: [],
   },
@@ -285,6 +316,8 @@ export const listDriveFilesTool: Tool = {
     const maxResults = (params.max_results as number) || 20;
     let folderId = params.folder_id as string | undefined;
     const folderName = params.folder_name as string | undefined;
+    const onlyFolders = params.only_folders as boolean | undefined;
+    const onlyFiles = params.only_files as boolean | undefined;
 
     const drive = await getDriveClient(userId);
     if (!drive) return AUTH_ERROR_MSG(userId);
@@ -295,7 +328,7 @@ export const listDriveFilesTool: Tool = {
       if (!folderId && folderName) {
         const found = await resolveFolder(drive, folderName);
         if (!found) {
-          return `❌ No encontré ninguna carpeta llamada "${folderName}" en tu Drive.\n\nUsa la herramienta search_drive_folder para buscarla y obtener su ID.`;
+          return `❌ No encontré ninguna carpeta llamada "${folderName}" en tu Drive.\n\nEspecifícame el ID si la conoces.`;
         }
         folderId = found.id;
         resolvedFolderName = found.name;
@@ -303,38 +336,40 @@ export const listDriveFilesTool: Tool = {
 
       let q = 'trashed = false';
       if (folderId) q += ` and '${folderId}' in parents`;
+      if (onlyFolders) q += ` and mimeType = 'application/vnd.google-apps.folder'`;
+      if (onlyFiles) q += ` and mimeType != 'application/vnd.google-apps.folder'`;
 
       const files = await fetchAllFiles(drive, q, 'files(id, name, mimeType, size, webViewLink)');
 
       if (files.length === 0) {
         const donde = resolvedFolderName || folderName || (folderId ? `carpeta ${folderId}` : 'tu Drive');
-        return `📁 La carpeta "${donde}" está vacía o no contiene archivos visibles (Acceso Total validado).`;
+        return `📁 No se encontraron ${onlyFolders ? 'carpetas' : 'archivos'} en "${donde}".`;
       }
 
+      // Separar carpetas y archivos para mejor visualización
+      const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+      const realFiles = files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+
       const header = resolvedFolderName
-        ? `📁 **${files.length} archivos en "${resolvedFolderName}":**`
-        : `📁 **${files.length} archivos en la raíz de Google Drive:**`;
-      let output = `${header}\n\n`;
+        ? `📁 **Contenido de "${resolvedFolderName}":**`
+        : `📁 **Contenido de la raíz de Google Drive:**`;
+      
+      let output = `${header}\n`;
+      output += `Total: ${files.length} (${folders.length} carpetas, ${realFiles.length} archivos)\n\n`;
 
-      // Limitar visualización si hay muchísimos archivos para no romper el contexto, 
-      // pero el agente ya tiene acceso total.
-      const displayLimit = Math.min(files.length, 40);
+      const displayList = [...folders, ...realFiles].slice(0, 50);
 
-      for (let i = 0; i < displayLimit; i++) {
-        const f = files[i];
+      for (const f of displayList) {
         const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
         const icon = isFolder ? '📁' : '📄';
         const link = f.webViewLink ||
           (isFolder ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`);
         const size = f.size ? `${(Number(f.size) / 1024).toFixed(1)} KB` : (isFolder ? 'Carpeta' : 'N/A');
-        output += `${icon} **${f.name}**\n`;
-        output += `   🆔 ID: \`${f.id}\`\n`;
-        output += `   📊 Tamaño: ${size}\n`;
-        output += `   🔗 Enlace: ${link}\n\n`;
+        output += `${icon} **${f.name}** | \`${f.id}\` | ${size}\n`;
       }
 
-      if (files.length > displayLimit) {
-        output += `\n⚠️ *Mostrando los primeros ${displayLimit} de ${files.length} archivos. Usa search_drive para encontrar archivos específicos.*`;
+      if (files.length > 50) {
+        output += `\n⚠️ *Mostrando 50 de ${files.length}. Usa search_drive para filtrar más.*`;
       }
 
       return sanitizeOutput(output);

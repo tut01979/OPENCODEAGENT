@@ -230,10 +230,12 @@ function parseResponse(data: APIResponse): LLMResponse {
 }
 
 export async function chat(messages: Message[], tools?: unknown[]): Promise<LLMResponse> {
-  const lastMessage = messages[messages.length - 1];
-  const lastContent = lastMessage?.content;
-  
-  const hasImages = Array.isArray(lastContent) && (lastContent as any).some((c: any) => c.type === 'image_url');
+  const hasImages = messages.some(m => {
+    if (Array.isArray(m.content)) {
+      return (m.content as any[]).some((c: any) => c.type === 'image_url');
+    }
+    return false;
+  });
   
   // PRIORIDAD 1: OpenRouter (Híbrido)
   if (config.openrouter.apiKey) {

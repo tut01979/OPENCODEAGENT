@@ -30,12 +30,19 @@ function toAPIToolCall(toolCall: ToolCall): APIToolCall {
   };
 }
 
-export async function runAgent(userId: string, userInput: string | any[]): Promise<AgentResult> {
+export async function runAgent(userId: string, userInput: string, imageUrl?: string): Promise<AgentResult> {
+  const finalContent = imageUrl 
+    ? [
+        { type: 'text', text: userInput },
+        { type: 'image_url', image_url: { url: imageUrl } }
+      ]
+    : userInput;
+
   // Save user message
-  memory.saveMessage(userId, 'user', userInput);
+  memory.saveMessage(userId, 'user', finalContent);
 
   // Build conversation context
-  const conversationHistory = await memory.getConversation(userId);
+  const conversationHistory = await memory.getConversation(userId, 40);
   const messages: Message[] = [
     { role: 'system', content: config.agent.getSystemPrompt() },
     ...conversationHistory.map(entry => {
