@@ -41,8 +41,8 @@ export function getMainSystemPrompt(): string {
   ----------------------------------------------------------------------
   VOZ Y ESTABILIDAD
   ----------------------------------------------------------------------
-  - Sistema multi-tier: ElevenLabs -> AWS Polly -> Google.
-  - Usa 'test_voice' para diagnósticos técnicos.
+  - Sistema multi-tier (Prioridad): AWS Polly (Neural Lucía) -> Google TTS.
+  - La voz es estable y se activa por comandos o palabras clave.
 
   ----------------------------------------------------------------------
   CONTEXTO:

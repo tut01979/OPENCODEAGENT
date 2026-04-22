@@ -225,16 +225,15 @@ export const searchDriveFilesTool: Tool = {
         const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
         const icon = isFolder ? '📁' : '📄';
         const link = f.webViewLink || (isFolder ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`);
-        const size = f.size ? `${(Number(f.size) / 1024).toFixed(1)} KB` : (isFolder ? 'Carpeta' : 'N/A');
         
-        output += `${icon} **${f.name}** | \`${f.id}\` | ${size}\n`;
+        output += `${icon} [${f.name}](${link}) \\| \`${f.id}\`\n`;
       }
 
       if (files.length > 40) {
         output += `\n... y ${files.length - 40} resultados más.`;
       }
 
-      return sanitizeOutput(output);
+      return output;
     } catch (error) {
       return `Error buscando en Drive: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -364,15 +363,14 @@ export const listDriveFilesTool: Tool = {
         const icon = isFolder ? '📁' : '📄';
         const link = f.webViewLink ||
           (isFolder ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`);
-        const size = f.size ? `${(Number(f.size) / 1024).toFixed(1)} KB` : (isFolder ? 'Carpeta' : 'N/A');
-        output += `${icon} **${f.name}** | \`${f.id}\` | ${size}\n`;
+        output += `${icon} [${f.name}](${link}) \\| \`${f.id}\`\n`;
       }
 
       if (files.length > 50) {
         output += `\n⚠️ *Mostrando 50 de ${files.length}. Usa search_drive para filtrar más.*`;
       }
 
-      return sanitizeOutput(output);
+      return output;
     } catch (error) {
       return `Error listando archivos: ${error instanceof Error ? error.message : String(error)}`;
     }

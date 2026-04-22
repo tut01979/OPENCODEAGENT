@@ -14,26 +14,26 @@ export const testVoiceTool: Tool = {
   },
   execute: async (params, userId) => {
     const text = (params.text as string) || "Probando sistema de estabilidad de voz de Open Code Agent.";
-    let report = "🛠️ **INFORME TÉCNICO DE VOZ**\n\n";
+    let report = "🛠️ <b>INFORME TÉCNICO DE VOZ</b>\n\n";
     
     // Check Config
-    report += `1. **Configuración ElevenLabs**: ${config.elevenlabs.apiKey ? '✅ API Key presente' : '❌ Falta API Key'}\n`;
-    report += `2. **Configuración AWS Polly**: ${config.voice.awsAccessKey ? '✅ Credenciales presentes' : '❌ Faltan credenciales'}\n`;
-    report += `3. **Región AWS**: \`${config.voice.awsRegion}\` | **Voz**: \`${config.voice.pollyVoice}\`\n\n`;
+    report += `1. <b>Configuración AWS Polly</b>: ${config.voice.awsAccessKey ? '✅ Credenciales presentes' : '❌ Faltan credenciales'}\n`;
+    report += `2. <b>Región AWS</b>: <code>${config.voice.awsRegion}</code> | <b>Voz</b>: <code>${config.voice.pollyVoice}</code>\n`;
+    report += `3. <b>Fallback Google TTS</b>: ✅ Siempre disponible\n\n`;
 
     report += "🎙️ **Intentando generación de audio...**\n";
     
     try {
       const files = await voiceService.textToSpeech(text, userId);
       if (files.length > 0) {
-        report += `✅ **Éxito**: Se generaron ${files.length} fragmentos de audio.\n`;
-        report += `📂 **Ruta**: \`${files[0]}\`\n`;
-        report += `⚠️ *Nota: Si la voz es robótica, es que ElevenLabs y Polly fallaron y se usó el respaldo de Google.*`;
+        report += `✅ <b>Éxito</b>: Se generaron ${files.length} fragmentos de audio.\n`;
+        report += `📂 <b>Ruta</b>: <code>${files[0]}</code>\n`;
+        report += `\n⚠️ <i>Nota: El sistema prioriza Amazon Polly (Lucía) y usa Google TTS como respaldo ultra-estable.</i>`;
       } else {
-        report += "❌ **Fallo Total**: No se generó ningún archivo.";
+        report += "❌ <b>Fallo Total</b>: No se generó ningún archivo.";
       }
     } catch (err: any) {
-      report += `❌ **Error Crítico**: ${err.message}`;
+      report += `❌ <b>Error Crítico</b>: ${err.message}`;
     }
 
     return report;

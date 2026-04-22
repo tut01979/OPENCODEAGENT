@@ -32,7 +32,7 @@ export const config = {
   openrouter: {
     apiKey: getEnv('OPENROUTER_API_KEY', false),
     model: getEnv('OPENROUTER_MODEL', false) || 'google/gemini-2.0-flash-001',
-    textModel: getEnv('OPENROUTER_TEXT_MODEL', false) || 'google/gemini-2.0-flash-001',
+    textModel: getEnv('OPENROUTER_TEXT_MODEL', false) || 'openai/gpt-4o-mini',
   },
   db: {
     path: getEnv('DB_PATH', false) || './data/memory.db',
@@ -49,19 +49,11 @@ export const config = {
     getSystemPrompt: () => getMainSystemPrompt(),
   },
   gmail: {
-    authMessage: (url: string) => `🔑 **ACCESO REQUERIDO** 🔑\n\nNo puedo leer tus correos porque el token ha caducado o no existe.\n\nAutoriza de nuevo aquí:\n🔗 ${url}\n\n(Si eres el admin, esto renovará el Token Maestro).`,
-  },
-  elevenlabs: {
-    apiKey: getEnv('ELEVENLABS_API_KEY', false) || '',
+    authMessage: (url: string) => `🔐 <b>ACCESO REQUERIDO</b> 🔐\n\nNo puedo leer tus correos porque el token ha caducado o no existe.\n\n<a href="${url}"><b>Haz clic aquí para Autorizar de nuevo</b></a>\n\n(Si eres el admin, esto renovará el Token Maestro).`,
   },
   voice: {
     // Voces TTSMP3 (Amazon Polly) en orden de prioridad
-    // Se intentan en orden: si la primera falla, se prueba la siguiente
     fallbackVoices: (getEnv('VOICE_FALLBACK_LIST', false) || 'Lucia,Enrique,Conchita,Miguel,Penelope').split(',').map(s => s.trim()),
-    // Voice IDs de ElevenLabs en orden de prioridad (obtenidos de tu cuenta)
-    elevenlabsVoiceIds: (getEnv('ELEVENLABS_VOICE_IDS', false) || 'l1zE9xgNpUTaQCZzpNJa,8MeTTgXVwMEhRVfblXOj,6un5jIrLUaTPf56cFT5V').split(',').map(s => s.trim()),
-    // Nombres descriptivos para los logs
-    elevenlabsVoiceNames: (getEnv('ELEVENLABS_VOICE_NAMES', false) || 'Alberto Rodriguez,Carlos Aguilar,Nova').split(',').map(s => s.trim()),
     awsAccessKey: getEnv('AWS_ACCESS_KEY_ID', false) || '',
     awsSecretKey: getEnv('AWS_SECRET_ACCESS_KEY', false) || '',
     awsRegion: getEnv('AWS_REGION', false) || 'us-east-1',

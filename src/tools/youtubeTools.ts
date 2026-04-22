@@ -97,17 +97,9 @@ function isUnauthorizedError(err: unknown): boolean {
 const YOUTUBE_REAUTH_MSG = (userId: string, reason: string) => {
   const url = generateAuthUrl(userId);
   if (!url) {
-    return `🔐 **YouTube necesita autorización o reautorización.**
-
-No se pudo generar el enlace de autorización automáticamente. Verifica que las credenciales de Google OAuth estén configuradas correctamente.`;
+    return `🔐 <b>YouTube necesita autorización o reautorización.</b>\n\nNo se pudo generar el enlace de autorización automáticamente. Verifica que las credenciales de Google OAuth estén configuradas correctamente.`;
   }
-  return `🔗 **YouTube necesita autorización o reautorización.**
-
-${reason}
-
-👉 **Autoriza aquí:** ${url}
-
-Después de autorizar, vuelve a pedirme la acción y funcionará correctamente.`;
+  return `🔗 <b>YouTube necesita autorización o reautorización.</b>\n\n${reason}\n\n👉 <a href="${url}"><b>Haz clic aquí para Autorizar</b></a>\n\nDespués de autorizar, vuelve a pedirme la acción y funcionará correctamente.`;
 };
 
 function formatDuration(isoDuration: string): string {

@@ -24,8 +24,17 @@ interface APIResponse {
   choices: APIChoice[];
 }
 
+const OPENROUTER_FALLBACK_MODELS = [
+  'openai/gpt-4o-mini',
+  'google/gemini-2.0-flash-lite-preview-02-05',
+  'anthropic/claude-3-haiku',
+  'mistralai/mistral-small-24b-instruct-2501',
+  'google/gemini-flash-1.5',
+];
+
 async function callOllama(messages: Message[], tools?: unknown[]): Promise<LLMResponse> {
-  // Convertir mensajes al formato de Ollama
+  if (!config.ollama.baseUrl) throw new Error('Ollama not configured');
+  
   const ollamaMessages = messages.map(m => ({
     role: m.role,
     content: m.content || '',
@@ -33,34 +42,26 @@ async function callOllama(messages: Message[], tools?: unknown[]): Promise<LLMRe
 
   const response = await fetch(`${config.ollama.baseUrl}/api/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: config.ollama.model,
       messages: ollamaMessages,
       stream: false,
-      options: {
-        temperature: 0.3,
-      },
+      options: { temperature: 0.3 },
     }),
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Ollama error: ${response.status} - ${error}`);
+    throw new Error(`Ollama error: ${response.status}`);
   }
 
   const data = await response.json();
-  
-  return {
-    content: data.message?.content || null,
-    toolCalls: undefined,
-  };
+  return { content: data.message?.content || null, toolCalls: undefined };
 }
 
 async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResponse> {
-  const lastMessage = messages[messages.length - 1];
+  if (!config.groq.apiKey) throw new Error('Groq API key not configured');
+  
   const hasImages = messages.some(m => {
     if (Array.isArray(m.content)) {
       return (m.content as any[]).some((c: any) => c.type === 'image_url');
@@ -68,23 +69,17 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
     return false;
   });
   
-  // Groq no soporta imágenes, saltar si hay contenido multimodal
-  if (hasImages) {
-    throw new Error('Groq no soporta imágenes, saltando...');
-  }
+  if (hasImages) throw new Error('Groq no soporta imágenes.');
   
-  // Groq para texto de alta velocidad (usando 70B para mejor razonamiento)
   const model = config.groq.model;
-  console.log(`🤖 Groq (Text): ${model} | hasImages: ${hasImages}`);
+  console.log(`🤖 Groq (Text): ${model}`);
 
-  // Convertir contenido multimodal a string (por si hay arrays en el historial)
   const cleanedMessages = messages.map(m => {
     if (Array.isArray(m.content)) {
-      // Extraer solo texto del contenido multimodal
       const textParts = (m.content as any[])
         .filter((c: any) => c.type === 'text')
         .map((c: any) => c.text);
-      return { ...m, content: textParts.join('\n') || '[Contenido multimodal - imagen no disponible]' };
+      return { ...m, content: textParts.join('\n') || '[Contenido multimodal]' };
     }
     return m;
   });
@@ -101,13 +96,22 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0.3,
+      temperature: 0.1,
     }),
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Groq API error: ${response.status} - ${error}`);
+    const errorText = await response.text();
+    let errorData;
+    try { errorData = JSON.parse(errorText); } catch { errorData = { error: { message: errorText } }; }
+
+    if (errorData.error?.code === 'tool_use_failed' && tools?.length) {
+      console.warn('⚠️ Groq tool_use_failed. Reintentando sin herramientas...');
+      return await callGroq(messages, undefined);
+    }
+
+    const status = response.status;
+    throw { status, message: errorText };
   }
 
   const data: APIResponse = await response.json();
@@ -115,9 +119,7 @@ async function callGroq(messages: Message[], tools?: unknown[]): Promise<LLMResp
 }
 
 async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel?: string): Promise<LLMResponse> {
-  if (!config.openrouter.apiKey) {
-    throw new Error('OpenRouter API key not configured');
-  }
+  if (!config.openrouter.apiKey) throw new Error('OpenRouter API key not configured');
 
   const model = forceModel || config.openrouter.model;
   console.log(`📡 OpenRouter [${model}]`);
@@ -136,13 +138,14 @@ async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel
       tools: tools?.length ? tools : undefined,
       tool_choice: tools?.length ? 'auto' : undefined,
       max_tokens: 4096,
-      temperature: 0.3,  // Deterministic behavior for maximum precision and reducing hallucinations
+      temperature: 0.3,
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    const status = response.status;
+    throw { status, message: error };
   }
 
   const data: APIResponse = await response.json();
@@ -151,82 +154,46 @@ async function callOpenRouter(messages: Message[], tools?: unknown[], forceModel
 
 function cleanResponse(text: string | null): string | null {
   if (!text) return null;
-  
-  // Filtrar TODOS los mensajes basura que puedan venir del LLM
   let cleaned = text;
-  
-  // Remover system-reminder y variaciones
   cleaned = cleaned.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, '');
   cleaned = cleaned.replace(/\[system-reminder\][\s\S]*?\[\/system-reminder\]/gi, '');
-  
-  // Remover mensajes sobre operational mode
   cleaned = cleaned.replace(/Your operational mode[\s\S]*?tools as needed\./gi, '');
   cleaned = cleaned.replace(/Operational mode[\s\S]*?changed[\s\S]*?\./gi, '');
   cleaned = cleaned.replace(/You are no longer[\s\S]*?\./gi, '');
   cleaned = cleaned.replace(/You are permitted[\s\S]*?tools[\s\S]*?\./gi, '');
-  
-  // Remover mensajes de otros asistentes de IA
   cleaned = cleaned.replace(/<\|assistant\|>[\s\S]*?<\|\/assistant\|>/gi, '');
   cleaned = cleaned.replace(/\[INST\][\s\S]*?\[\/INST\]/gi, '');
   cleaned = cleaned.replace(/<<SYS>>[\s\S]*?<\/SYS>>/gi, '');
-  
-  // 🛡️ Limpieza avanzada de caracteres extraños y repeticiones (Anti-Gravity Fix)
-  cleaned = cleaned.replace(/#{3,}/g, '###'); // Normalizar títulos excesivos
-  cleaned = cleaned.replace(/(\*\*\s*){2,}/g, '**'); // Quitar negritas repetitivas vacías
-  cleaned = cleaned.replace(/(\n\s*){3,}/g, '\n\n'); // Max 2 saltos de línea
-  cleaned = cleaned.replace(/[\u2500-\u257F\u2580-\u259F]/g, ''); // Dibujo de cajas residual
-  
-  // Limpiar líneas vacías extras
+  cleaned = cleaned.replace(/#{3,}/g, '###'); 
+  cleaned = cleaned.replace(/(\*\*\s*){2,}/g, '**'); 
+  cleaned = cleaned.replace(/(\n\s*){3,}/g, '\n\n'); 
+  cleaned = cleaned.replace(/[\u2500-\u257F\u2580-\u259F]/g, ''); 
   cleaned = cleaned.replace(/^\s*\n/gm, '').trim();
-  
   return cleaned || null;
 }
 
 function parseResponse(data: APIResponse): LLMResponse {
   const choice = data.choices[0];
-  if (!choice) {
-    throw new Error('No response choices from API');
-  }
-
+  if (!choice) throw new Error('No response choices from API');
   const message = choice.message;
-  
-  // Limpiar contenido
   const content = cleanResponse(message.content);
   
   let toolCalls: ToolCall[] | undefined;
   if (message.tool_calls && message.tool_calls.length > 0) {
     try {
-      toolCalls = message.tool_calls.map(tc => {
-        let args = {};
-        try {
-          args = JSON.parse(tc.function.arguments);
-          console.log(`🛠️ Tool call arguments: ${JSON.stringify(args)}`);
-        } catch (err) {
-          console.error(`Error parsing tool arguments for ${tc.function.name}:`, err);
-          args = {};
-        }
-        return {
-          id: tc.id,
-          type: 'function' as const,
-          name: tc.function.name,
-          arguments: args,
-        };
-      });
+      toolCalls = message.tool_calls.map(tc => ({
+        id: tc.id,
+        type: 'function' as const,
+        name: tc.function.name,
+        arguments: JSON.parse(tc.function.arguments),
+      }));
     } catch (e) {
       console.error('Error parsing tool calls:', e);
       toolCalls = undefined;
     }
   }
 
-  // Si no hay contenido ni tool_calls, devolver null para que el agente responda
-  if (!content && !toolCalls) {
-    return { content: null, toolCalls: undefined };
-  }
-
-  return {
-    content,
-    toolCalls: toolCalls?.length ? toolCalls : undefined,
-  };
+  return { content, toolCalls: toolCalls?.length ? toolCalls : undefined };
 }
 
 export async function chat(messages: Message[], tools?: unknown[]): Promise<LLMResponse> {
@@ -236,35 +203,62 @@ export async function chat(messages: Message[], tools?: unknown[]): Promise<LLMR
     }
     return false;
   });
-  
-  // PRIORIDAD 1: OpenRouter (Híbrido)
-  if (config.openrouter.apiKey) {
+
+  // 1. SI HAY IMÁGENES: OpenRouter (Gemini) es obligatorio
+  if (hasImages && config.openrouter.apiKey) {
     try {
-      // Elegir Gemini si hay imagen, si no usar el modelo de texto (GPT-4o mini)
-      const targetModel = hasImages ? config.openrouter.model : (config.openrouter as any).textModel;
-      console.log(`🧠 IA Híbrida [OpenRouter]: Usando ${targetModel} (Imágenes: ${hasImages})`);
-      return await callOpenRouter(messages, tools, targetModel);
-    } catch (orError) {
-      console.error('OpenRouter principal falló:', orError);
+      console.log(`🎨 [VISIÓN] Usando OpenRouter (Gemini 2.0)...`);
+      return await callOpenRouter(messages, tools, config.openrouter.model);
+    } catch (err) {
+      console.error('Error en visión OpenRouter:', err);
+      // Fallback a otros modelos de OpenRouter que soporten visión si Gemini falla
+      for (const model of OPENROUTER_FALLBACK_MODELS) {
+        if (model.includes('gemini') || model.includes('gpt-4o')) {
+          try { return await callOpenRouter(messages, tools, model); } catch { continue; }
+        }
+      }
     }
   }
 
-  // PRIORIDAD 2: Groq (Llama 3.3 70B) - Alta velocidad, buen razonamiento
-  if (config.groq.apiKey) {
+  // 2. TEXTO - PRIORIDAD 1: Groq (Llama 3.3 70B) - El más rápido
+  if (!hasImages && config.groq.apiKey) {
     try {
-      console.log(`🤖 Usando Groq (Llama 70B)...`);
+      console.log(`🚀 [TEXTO] Usando Groq (Llama 70B)...`);
       return await callGroq(messages, tools);
-    } catch (groqError) {
-      console.error('Groq principal falló:', groqError);
+    } catch (err: any) {
+      console.error(`Groq falló (Status ${err.status}):`, err.message);
+      // Si es rate limit (429), pasar a OpenRouter
     }
   }
 
-  // PRIORIDAD 3: Ollama (Local)
-  try {
-    console.log(`🏠 Usando Ollama (Local)...`);
-    return await callOllama(messages, tools);
-  } catch (ollamaError) {
-    console.error('Ollama falló:', ollamaError);
-    throw new Error('Ningún servicio de LLM disponible. Configura OPENROUTER_API_KEY o GROQ_API_KEY.');
+  // 3. TEXTO - PRIORIDAD 2: OpenRouter (gpt-4o-mini o fallbacks)
+  if (config.openrouter.apiKey) {
+    const textModels = [
+      (config.openrouter as any).textModel || 'openai/gpt-4o-mini',
+      ...OPENROUTER_FALLBACK_MODELS
+    ];
+
+    for (const model of textModels) {
+      try {
+        console.log(`🧠 [FALLBACK] Usando OpenRouter (${model})...`);
+        return await callOpenRouter(messages, tools, model);
+      } catch (err: any) {
+        const status = err.status || 0;
+        console.error(`OpenRouter [${model}] falló (Status ${status})`);
+        if (status === 401 || status === 400) break; // Errores fatales
+      }
+    }
   }
+
+  // 4. ÚLTIMO RECURSO: Ollama (Local)
+  try {
+    console.log(`🏠 [LOCAL] Usando Ollama...`);
+    return await callOllama(messages, tools);
+  } catch (err) {
+    console.error('Ollama también falló.');
+  }
+
+  throw new Error('⚠️ El agente está temporalmente sobrecargado. Inténtalo de nuevo en unos minutos.');
 }
+
+

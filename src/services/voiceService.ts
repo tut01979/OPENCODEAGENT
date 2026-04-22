@@ -16,11 +16,6 @@ export const voiceService = {
     const chunks = cleanTextForSpeech(text); 
     const generatedFiles: string[] = [];
 
-    // Priorizamos variables de entorno directas para AWS (estándar de SDK)
-    const awsAccessKey = process.env.AWS_ACCESS_KEY_ID || config.voice.awsAccessKey;
-    const awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY || config.voice.awsSecretKey;
-    const awsRegion = process.env.AWS_REGION || config.voice.awsRegion || "us-east-1";
-
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       if (!chunk || chunk.trim().length === 0) continue;
@@ -29,78 +24,60 @@ export const voiceService = {
       const filePath = path.join(TEMP_DIR, fileName);
       let success = false;
 
-      // --- INTENTO 1: ELEVENLABS (Premium Ultra) ---
-      if (config.elevenlabs.apiKey) {
+      // --- 1. INTENTO CON AMAZON POLLY (Prioridad Superior - Calidad Neural) ---
+      if (config.voice.awsAccessKey && config.voice.awsSecretKey) {
         try {
-          console.log(`🎙️ [VOICE] Intentando ElevenLabs (Parte ${i+1}/${chunks.length})...`);
-          const voiceId = config.voice.elevenlabsVoiceIds[0] || "21m00Tcm4TlvDq8ikWAM";
-          const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+          console.log(`🎙️ [VOICE] Intentando Amazon Polly (Neural) - Parte ${i+1}/${chunks.length}...`);
           
-          const response = await axios({
-            method: 'POST',
-            url: url,
-            data: {
-              text: chunk,
-              model_id: "eleven_multilingual_v2",
-              voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.0, use_speaker_boost: true }
-            },
-            headers: {
-              'xi-api-key': config.elevenlabs.apiKey,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'arraybuffer'
-          });
+          // Limpiamos credenciales de posibles espacios o recortes mal hechos
+          const accessKey = config.voice.awsAccessKey.replace(/[^A-Z0-9]/g, '').trim();
+          const secretKey = config.voice.awsSecretKey.trim();
+          const region = config.voice.awsRegion || 'us-east-1';
 
-          fs.writeFileSync(filePath, Buffer.from(response.data));
-          console.log(`✅ [VOICE] ElevenLabs exitoso.`);
-          generatedFiles.push(filePath);
-          success = true;
-        } catch (error: any) {
-          const status = error.response?.status;
-          const detail = error.response?.data ? Buffer.from(error.response.data).toString() : error.message;
-          console.warn(`⚠️ [VOICE] ElevenLabs falló (Status: ${status}). Motivo: ${detail}`);
-        }
-      }
-
-      // --- INTENTO 2: AMAZON POLLY (Premium Neural) ---
-      if (!success && awsAccessKey && awsSecretKey) {
-        try {
-          console.log(`🎙️ [VOICE] Intentando Amazon Polly Neural (Parte ${i+1}/${chunks.length})...`);
           const polly = new PollyClient({
-            region: awsRegion,
+            region,
             credentials: {
-              accessKeyId: awsAccessKey.trim(),
-              secretAccessKey: awsSecretKey.trim()
-            }
+              accessKeyId: accessKey,
+              secretAccessKey: secretKey,
+            },
           });
 
           const command = new SynthesizeSpeechCommand({
-             OutputFormat: "mp3",
-             Text: chunk,
-             VoiceId: (config.voice.pollyVoice || "Lucia") as any,
-             Engine: "neural"
+            Text: chunk,
+            OutputFormat: 'mp3',
+            VoiceId: (config.voice.pollyVoice || 'Lucia') as any,
+            Engine: 'neural',
           });
-          
-          const response = await polly.send(command);
+
+          const response = await polly.send(command).catch(async (err) => {
+            if (err.name === 'ValidationException' || err.message.includes('Engine')) {
+              console.log('⚠️ [VOICE] Reintentando Polly en modo Standard (Neural no disponible)');
+              return await polly.send(new SynthesizeSpeechCommand({
+                Text: chunk,
+                OutputFormat: 'mp3',
+                VoiceId: (config.voice.pollyVoice || 'Lucia') as any,
+                Engine: 'standard',
+              }));
+            }
+            throw err;
+          });
+
           if (response.AudioStream) {
             const buffer = Buffer.from(await response.AudioStream.transformToByteArray());
             fs.writeFileSync(filePath, buffer);
-            console.log(`✅ [VOICE] Amazon Polly Neural exitoso.`);
+            console.log('✅ [VOICE] Amazon Polly completado.');
             generatedFiles.push(filePath);
             success = true;
           }
-        } catch (error: any) {
-          console.warn(`⚠️ [VOICE] Amazon Polly falló. Error: ${error.name} - ${error.message}`);
-          if (error.name === 'InvalidSignatureException') {
-            console.error("❌ [VOICE] Error Crítico: Las claves de AWS no son válidas o tienen espacios extra.");
-          }
+        } catch (error) {
+          console.warn('⚠️ [VOICE] Amazon Polly falló. Pasando a fallback...', error instanceof Error ? error.message : String(error));
         }
       }
 
-      // --- INTENTO 3: GOOGLE TTS (Respaldo Estándar - "Robótico") ---
+      // --- 2. INTENTO CON GOOGLE TTS (Fallback Estable - Muy robusto) ---
       if (!success) {
         try {
-          console.log(`🎙️ [VOICE] Intentando Google TTS (Respaldo Final)...`);
+          console.log(`🎙️ [VOICE] Intentando Google TTS (Fallback) - Parte ${i+1}/${chunks.length}...`);
           const audioData = await googleTTS.getAllAudioBase64(chunk, {
             lang: 'es',
             slow: false,
@@ -114,21 +91,22 @@ export const voiceService = {
           }
           
           fs.writeFileSync(filePath, completeAudio);
-          console.log(`✅ [VOICE] Google TTS exitoso (Nota: Calidad reducida).`);
+          console.log(`✅ [VOICE] Google TTS completado.`);
           generatedFiles.push(filePath);
           success = true;
         } catch (error: any) {
-          console.error(`❌ [VOICE] Todos los servicios de voz fallaron. Error:`, error.message);
-          // Alerta especial si parece un problema de conexión o cuotas generales
-          if (error.message.includes('quota') || error.message.includes('429')) {
-             console.error("📊 [VOICE] Sugerencia: Revisa tus cuotas de API de Google/ElevenLabs.");
-          }
+          console.warn(`⚠️ [VOICE] Google TTS falló: ${error.message}`);
         }
+      }
+
+      // --- 3. ÚLTIMO RECURSO ---
+      if (!success) {
+        console.error(`❌ [VOICE] No se pudo generar audio para la parte ${i+1} con ningún servicio disponible.`);
       }
     }
 
     if (generatedFiles.length === 0) {
-      console.warn("⚠️ [VOICE] No se generó ningún archivo de audio.");
+      console.error("❌ CRÍTICO: No se pudo generar audio con ningún servicio.");
     }
 
     return generatedFiles;

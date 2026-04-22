@@ -25,46 +25,37 @@ export function setupCron(bot: Bot) {
     console.log(`✨ Iniciando resumen ejecutivo diario (${todayStr})...`);
 
     try {
-      const prompt = `ACTUACIÓN OBLIGATORIA - RESUMEN EJECUTIVO DIARIO:
+      const prompt = `TAREA EJECUTIVA CRÍTICA - RESUMEN DIARIO DE HOY (${todayStr}):
 
-EJECUTA ESTAS HERRAMIENTAS EN ORDEN SIN SALTARTE NINGUNA:
+EJECUTA ESTAS HERRAMIENTAS AHORA MISMO:
 
-1. list_events con { days_ahead: 1, max_results: 20 }
-   → Lista los eventos de Google Calendar de HOY completo (00:00-23:59).
-   → Si devuelve 0 eventos, vuelve a llamarla con { days_ahead: 7 } para ver si hay alguno esta semana.
+1. list_events({ days_ahead: 1 }) 
+   → IMPORTANTE: Debes listar los eventos de HOY.
+2. read_email({ query: "is:unread", max_results: 5 })
 
-2. read_email con { query: "is:unread", max_results: 5 }
-   → Si devuelve 0 resultados, prueba con { query: "newer_than:1d", max_results: 5 }
-   → Si sigue sin resultados, confirma que no hay correos nuevos.
+UNA VEZ TENGAS LOS DATOS, genera un resumen profesional para el usuario con este formato:
 
-3. Con los resultados REALES de las herramientas compone el mensaje. No inventes datos.
+🌟 *Buenos días, ${todayStr}*
 
-FORMATO DE RESPUESTA (usa este formato exacto):
+📅 *Tu agenda de hoy:*
+[Lista cada evento con su hora. Si no hay, di: "No hay eventos para hoy."]
 
-🌟 Buenos días, ${todayStr}
+📧 *Correos pendientes:*
+[Lista los 5 más recientes. Si no hay: "Bandeja limpia ✅"]
 
-📅 Tu agenda de hoy:
-[Lista cada evento con hora y título. Si no hay eventos: "No tienes eventos programados para hoy."]
+💡 *Recomendación:* [Frase motivadora]
 
-📧 Correos pendientes:
-[Lista remitente + asunto de cada correo sin leer. Si no hay: "Bandeja de entrada limpia ✅"]
-
-💡 Recomendación del día: [Una frase motivadora breve]
-
-REGLAS:
-- SIEMPRE usa las herramientas antes de responder. Nunca asumas.
-- Si una herramienta devuelve error de autenticación, escríbelo en el mensaje.`;
+REGLA DE ORO: No digas "he revisado", MUESTRA los datos reales obtenidos de las herramientas.`;
 
       const result = await runAgent(targetUser, prompt);
 
-      try {
-        await bot.api.sendMessage(targetUser, result.response, { parse_mode: 'Markdown' });
-      } catch {
-        await bot.api.sendMessage(targetUser, result.response);
-      }
+      // Usamos parse_mode Markdown para el envío final
+      await bot.api.sendMessage(targetUser, result.response, { parse_mode: 'Markdown' });
+      
       console.log('✅ Resumen diario enviado con éxito.');
     } catch (error) {
       console.error('❌ Error en la tarea programada:', error);
     }
   }, { timezone: TIMEZONE });
+
 }

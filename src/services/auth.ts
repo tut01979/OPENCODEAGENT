@@ -99,11 +99,13 @@ export function startAuthServer(port: number = 3000) {
     if (!oAuth2Client) return res.status(500).send('❌ Error de configuración.');
 
     try {
+      console.log(`📡 [AUTH] Intercambiando código por tokens para usuario ${userId}...`);
       const { tokens } = await oAuth2Client.getToken(code);
 
       console.log(`🔑 Tokens recibidos para usuario ${userId}:`);
       console.log(`   - access_token: ${tokens.access_token ? 'presente' : 'FALTANTE'}`);
       console.log(`   - refresh_token: ${tokens.refresh_token ? 'presente' : 'FALTANTE'}`);
+      console.log(`   - scope: ${tokens.scope}`);
 
       if (!tokens.access_token) {
         console.error('❌ CRÍTICO: Google no devolvió access_token.');
@@ -113,17 +115,18 @@ export function startAuthServer(port: number = 3000) {
       // 🔄 Lógica de Preservación de Refresh Token para evitar expiraciones
       let finalTokens = { ...tokens };
       if (!tokens.refresh_token) {
-        console.log(`🔍 Buscando refresh_token antiguo para ${userId}...`);
+        console.log(`🔍 [AUTH] No se recibió refresh_token. Buscando antiguo para ${userId}...`);
         const oldToken = await firebase.getUserToken(userId);
         if (oldToken && oldToken.refresh_token) {
-          console.log(`✅ refresh_token preservado desde Firebase.`);
+          console.log(`✅ [AUTH] refresh_token preservado desde Firebase.`);
           finalTokens.refresh_token = oldToken.refresh_token;
         } else {
-          console.warn('⚠️ No se encontró refresh_token antiguo. El usuario deberá revocar el acceso en Google para obtener uno nuevo.');
+          console.warn('⚠️ [AUTH] No se encontró refresh_token antiguo ni nuevo. El usuario deberá revocar el acceso en Google (myaccount.google.com) para forzar un nuevo refresh_token.');
         }
       }
 
       await firebase.saveUserToken(userId, finalTokens);
+      console.log(`📡 [AUTH] Token guardado exitosamente para ${userId}`);
 
       res.send(`
         <div style="font-family: sans-serif; text-align: center; margin-top: 50px; background: #0f172a; color: white; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0;">
@@ -134,10 +137,9 @@ export function startAuthServer(port: number = 3000) {
           </div>
         </div>
       `);
-      console.log(`📡 Cliente conectado con éxito: ${userId}`);
     } catch (error) {
-      console.error('Error intercambiando el código de Google:', error);
-      res.status(500).send('❌ Error al autenticar con Google.');
+      console.error('❌ [AUTH] Error intercambiando el código de Google:', error);
+      res.status(500).send(`❌ Error al autenticar con Google: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   });
 

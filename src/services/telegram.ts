@@ -120,7 +120,8 @@ export function createBot(): Bot {
       await ctx.reply('❌ Error al generar URL.');
       return;
     }
-    await ctx.reply(`🔐 [Autorizar con Google](${url})`, { parse_mode: 'Markdown' });
+    // Usamos HTML para asegurar que Telegram no rompa la URL con caracteres Markdown
+    await ctx.reply(`🔐 <a href="${url}"><b>Haz clic aquí para Autorizar con Google</b></a>`, { parse_mode: 'HTML' });
   });
 
   // 🎙️ MANEJADOR DE VOZ
@@ -154,10 +155,8 @@ export function createBot(): Bot {
       await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, `📝 **Has dicho:** "${transcription}"`);
       
       await ctx.replyWithChatAction('typing');
-      // No guardamos aquí, lo hace runAgent internamente para evitar duplicados.
       const result = await runAgent(userId, transcription);
 
-      // ✅ RESPUESTA DUAL: SIEMPRE TEXTO + VOZ
       await sendLongMessage(ctx, result.response, 'Markdown');
 
       await ctx.replyWithChatAction('record_voice');
@@ -168,9 +167,12 @@ export function createBot(): Bot {
           fs.unlinkSync(audioFile);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error en voz:', error);
-      await ctx.reply('⚠️ Error procesando voz.');
+      const userMessage = error.message?.includes('sobrecargado') 
+        ? error.message 
+        : '⚠️ Error procesando voz. El sistema podría estar saturado.';
+      await ctx.reply(userMessage);
     } finally {
       if (localPath && fs.existsSync(localPath)) fs.unlinkSync(localPath);
     }
@@ -211,10 +213,11 @@ export function createBot(): Bot {
       await sendLongMessage(ctx, result.response, 'Markdown');
 
       // Detectar si pide voz por palabra clave
-      const voiceKeywords = ["prueba de voz", "voz", "léeme", "lee esto", "habla", "di esto", "dime con voz", "responde con voz"];
+      const voiceKeywords = ["prueba de voz", "voz", "léeme", "lee esto", "habla", "di esto", "dime con voz", "responde con voz", "léelo"];
       const hasVoiceKeyword = voiceKeywords.some(kw => text.toLowerCase().includes(kw));
 
       if (audioModeUsers.has(userId) || hasVoiceKeyword) {
+        await ctx.replyWithChatAction('record_voice');
         const audioFiles = await voiceService.textToSpeech(result.response, userId);
         for (const audioFile of audioFiles) {
           if (fs.existsSync(audioFile)) {
@@ -223,9 +226,12 @@ export function createBot(): Bot {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error en texto:', error);
-      await ctx.reply('❌ Error procesando mensaje.');
+      const userMessage = error.message?.includes('sobrecargado') 
+        ? error.message 
+        : '⚠️ El sistema está experimentando una alta demanda. Por favor, intenta de nuevo en un momento.';
+      await ctx.reply(userMessage);
     }
   }
 
@@ -238,8 +244,9 @@ export function createBot(): Bot {
 
   async function processDocumentMessage(ctx: any, userId: string, doc: any) {
     try {
+      await ctx.replyWithChatAction('upload_document');
       const fileId = doc.file_id;
-      const fileName = doc.file_name || `doc_${Date.now()}`;
+      const fileName = doc.file_name || `Archivo_${Date.now()}`;
       const file = await ctx.api.getFile(fileId);
       const url = `https://api.telegram.org/file/bot${config.telegram.botToken}/${file.file_path}`;
       
@@ -256,8 +263,7 @@ export function createBot(): Bot {
 
       await ctx.reply(replyText, { parse_mode: 'Markdown' });
       
-      // Notificar al agente para que tenga el contexto
-      await runAgent(userId, `He subido un archivo llamado "${fileName}" a mi carpeta 'opencodeagent_uploads' en Drive.`);
+      await runAgent(userId, `He subido un archivo llamado "${fileName}" a mi carpeta 'opencodeagent_uploads' en Drive. Analízalo si es necesario.`);
     } catch (error) {
       console.error('Error procesando documento:', error);
       await ctx.reply('❌ Error al procesar el archivo.');
@@ -272,60 +278,100 @@ export function createBot(): Bot {
 
   async function processPhotoMessage(ctx: any, userId: string, photos: any) {
     const photo = photos[photos.length - 1]; // Mayor resolución
-    await ctx.reply('📷 Foto recibida. Analizando...');
+    await ctx.replyWithChatAction('typing');
+    const statusMsg = await ctx.reply('📷 Foto recibida. Procesando...');
+    
     try {
       const fileId = photo.file_id;
       const file = await ctx.api.getFile(fileId);
       const url = `https://api.telegram.org/file/bot${config.telegram.botToken}/${file.file_path}`;
       
-      // Descargar para Base64
       const axiosRes = await axios.get(url, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(axiosRes.data);
       const base64 = buffer.toString('base64');
       const dataUri = `data:image/jpeg;base64,${base64}`;
 
-      const result = await runAgent(userId, `[SISTEMA: El usuario ha enviado una imagen. Analízala y responde profesionalmente.]`, dataUri);
-      await sendLongMessage(ctx, result.response, 'Markdown');
+      const result = await runAgent(userId, `[SISTEMA: El usuario ha enviado una imagen. Analízala, describe qué es brevemente y sugiéreme un nombre técnico descriptivo de 3-5 palabras para el archivo (solo el nombre, sin extensión).]`, dataUri);
       
-      // Auto-upload a Drive
-      const fileName = `Vision_${Date.now()}.jpg`;
+      let smartName = `Imagen_${Date.now()}`;
+      const nameMatch = result.response.match(/(?:Nombre sugerido|archivo):?\s*(?:"|')?([^"'\n.]+)(?:"|')?/i);
+      if (nameMatch && nameMatch[1]) {
+        smartName = nameMatch[1].trim().replace(/\s+/g, '_');
+      }
+      
+      const fileName = `${smartName}.jpg`;
       const localPath = path.join(UPLOADS_DIR, fileName);
       fs.writeFileSync(localPath, buffer);
       
       const driveUrl = await uploadToDriveAuto(userId, localPath, fileName);
+      
+      await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, `✅ **Imagen analizada:**\n\n${result.response}`, { parse_mode: 'Markdown' });
+
       if (driveUrl) {
-        await ctx.reply(`📂 Imagen guardada en la carpeta **opencodeagent_uploads**\n🔗 [Ver en Drive](${driveUrl})`, { parse_mode: 'Markdown' });
+        await ctx.reply(`📂 Guardada como **${fileName}** en la carpeta **opencodeagent_uploads**\n🔗 [Ver en Drive](${driveUrl})`, { parse_mode: 'Markdown' });
       }
 
     } catch (error) {
       console.error('Error procesando foto:', error);
-      await ctx.reply('❌ No pude analizar la imagen debido a un error técnico.');
+      await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, '❌ No pude procesar la imagen debido a un error técnico.');
     }
   }
 
-
   return bot;
+}
+
+/**
+ * Escapa caracteres especiales para Markdown de Telegram (V1)
+ */
+function escapeMarkdown(text: string): string {
+  if (!text) return '';
+  // En Markdown V1 solo necesitamos escapar estos si queremos que se vean literalmente
+  // Pero lo más importante es NO escapar lo que no debe ser escapado
+  return text
+    .replace(/_/g, '\\_')
+    .replace(/\*/g, '\\*')
+    .replace(/\[/g, '\\[')
+    .replace(/`/g, '\\`');
+}
+
+/**
+ * Escapa caracteres especiales para HTML de Telegram
+ */
+function escapeHTML(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 async function sendLongMessage(ctx: any, message: string, parse_mode?: any): Promise<void> {
   const MAX_LENGTH = 4000;
   if (!message) return;
 
-  // Si el mensaje es corto, enviarlo tal cual
-  if (message.length <= MAX_LENGTH) {
+  // Si el mensaje contiene etiquetas HTML y no se especificó parse_mode, asumimos HTML
+  let effectiveMode = parse_mode;
+  if (!effectiveMode && (message.includes('</a>') || message.includes('</b>') || message.includes('</i>'))) {
+    effectiveMode = 'HTML';
+  }
+
+  // Si es texto plano (sin parse_mode), escapamos para el modo por defecto (Markdown)
+  const preparedMessage = effectiveMode ? message : escapeMarkdown(message);
+
+  if (preparedMessage.length <= MAX_LENGTH) {
     try {
-      await ctx.reply(message, { parse_mode });
+      await ctx.reply(preparedMessage, { parse_mode: effectiveMode || 'Markdown' });
       return;
     } catch (err) {
-      console.warn('⚠️ Error enviando mensaje con Markdown, reintentando sin formato:', err);
-      await ctx.reply(message);
+      console.warn(`⚠️ Error enviando ${effectiveMode || 'Markdown'}, reintentando como texto plano:`, err);
+      const plainText = message.replace(/[*_`\[\]()<>]/g, ''); 
+      await ctx.reply(plainText);
       return;
     }
   }
 
-  // Fragmentar el mensaje respetando párrafos si es posible
   const chunks: string[] = [];
-  let remaining = message;
+  let remaining = preparedMessage;
 
   while (remaining.length > 0) {
     if (remaining.length <= MAX_LENGTH) {
@@ -333,23 +379,20 @@ async function sendLongMessage(ctx: any, message: string, parse_mode?: any): Pro
       break;
     }
 
-    // Buscar el mejor punto de corte (salto de línea)
     let cutPoint = remaining.lastIndexOf('\n', MAX_LENGTH);
     if (cutPoint === -1 || cutPoint < MAX_LENGTH * 0.8) {
-      cutPoint = MAX_LENGTH; // Si no hay buen corte, cortar en el límite
+      cutPoint = MAX_LENGTH;
     }
 
     chunks.push(remaining.slice(0, cutPoint));
     remaining = remaining.slice(cutPoint).trim();
   }
 
-  for (let i = 0; i < chunks.length; i++) {
-    const part = chunks[i];
-    const prefix = chunks.length > 1 ? `[${i + 1}/${chunks.length}] ` : '';
+  for (const part of chunks) {
     try {
-      await ctx.reply(prefix + part, { parse_mode });
+      await ctx.reply(part, { parse_mode: effectiveMode || 'Markdown' });
     } catch (err) {
-      await ctx.reply(prefix + part);
+      await ctx.reply(part.replace(/[*_`\[\]()<>]/g, ''));
     }
   }
 }
@@ -377,9 +420,10 @@ async function uploadToDriveAuto(userId: string, filePath: string, fileName: str
       fields: 'id, webViewLink',
     });
 
-    return file.data.webViewLink || undefined;
+    return file.data.webViewLink || `https://drive.google.com/file/d/${file.data.id}/view`;
   } catch (error) {
     console.error('Error subiendo a Drive:', error);
     return undefined;
   }
 }
+
